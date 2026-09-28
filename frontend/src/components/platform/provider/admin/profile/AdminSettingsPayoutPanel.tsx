@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { Button } from "@/components/ui/Button";
+import { SkeletonBlock } from "@/components/platform/provider/student/DashboardSkeletons";
 import { ApiRequestError } from "@/lib/integrate/client";
 import {
   getPayoutSettings,
@@ -89,6 +90,19 @@ export function AdminSettingsPayoutPanel() {
         </div>
       ) : null}
 
+      {loading ? (
+        <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4" aria-busy="true" aria-label="Loading payout hold">
+          <div className="grid min-w-0 gap-2">
+            <SkeletonBlock className="h-3 w-48 max-w-full rounded-full" />
+            <SkeletonBlock className="h-11 w-full rounded-2xl" />
+            <SkeletonBlock className="h-3 w-32 max-w-full rounded-full" />
+          </div>
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-24" />
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-36" />
+          </div>
+        </div>
+      ) : (
       <form className="mt-5 grid gap-3 sm:mt-6 sm:gap-4" onSubmit={handleSubmit}>
         <div className="grid min-w-0 gap-2">
           <label htmlFor="payout-hold-days" className="dashboard-field-label">
@@ -131,6 +145,7 @@ export function AdminSettingsPayoutPanel() {
           </Button>
         </div>
       </form>
+      )}
     </section>
   );
 }

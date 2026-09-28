@@ -14,6 +14,7 @@ import {
 } from "@/components/platform/provider/admin/profile/settingsNav";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
+import { SkeletonBlock } from "@/components/platform/provider/student/DashboardSkeletons";
 import { ApiRequestError } from "@/lib/integrate/client";
 import { getStoredUser, updateStoredProfile } from "@/lib/integrate/auth/storage";
 import {
@@ -112,7 +113,7 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
       brandBackdrop
       nav={adminNav}
     >
-      <div className="dashboard-screen lectures-page profile-page min-w-0">
+      <div className="dashboard-screen lectures-page profile-page min-w-0 overflow-x-hidden">
         <header className="mb-4 flex min-w-0 items-center gap-2 overflow-visible py-0.5 sm:mb-5 sm:gap-3">
           <button
             type="button"
@@ -123,7 +124,7 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
             <Icon icon={Menu} size={18} />
           </button>
 
-          <h1 className="font-sans min-w-0 overflow-visible py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
+          <h1 className="font-sans min-w-0 truncate py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
             Settings
           </h1>
         </header>
@@ -139,10 +140,13 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
           </div>
         ) : null}
 
+        {!profile ? (
+          <AdminSettingsSkeleton />
+        ) : (
         <div className="grid w-full min-w-0 items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(15.5rem,18.75rem)_minmax(0,1fr)]">
           <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-3">
-            <section className="flex flex-col items-center rounded-2xl border border-[color:var(--dash-surface-border)] bg-white px-4 py-5 text-center shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5">
-              <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:h-24 sm:w-24 sm:text-xl">
+            <section className="flex min-w-0 flex-row items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white px-4 py-4 text-left shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:gap-4 sm:px-5 lg:flex-col lg:items-center lg:px-4 lg:py-5 lg:text-center">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:h-20 sm:w-20 lg:h-24 lg:w-24 lg:text-xl">
                 {avatarSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
@@ -151,31 +155,32 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
                 )}
               </span>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="sr-only"
-                onChange={(event) => void onPickPhoto(event.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto || !profile}
-                className="lecture-page-action dashboard-navy-btn font-sans mt-3 inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50"
-              >
-                {uploadingPhoto ? "Uploading…" : "Change photo"}
-              </button>
-
-              <p className="font-sans mt-3 max-w-full break-words text-base font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-lg">
-                {fullName}
-              </p>
-              <p className="text-brand-caption mt-1 max-w-full break-all text-[color:var(--dash-muted)]">
-                {profile?.email || "—"}
-              </p>
-              <span className="mt-3 inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 text-brand-caption font-semibold text-[color:var(--dash-muted)]">
-                Admin
-              </span>
+              <div className="flex min-w-0 flex-1 flex-col items-start lg:items-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={(event) => void onPickPhoto(event.target.files?.[0] ?? null)}
+                />
+                <p className="font-sans w-full truncate text-base font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-lg">
+                  {fullName}
+                </p>
+                <p className="text-brand-caption mt-1 w-full truncate text-[color:var(--dash-muted)]" title={profile.email || undefined}>
+                  {profile.email || "—"}
+                </p>
+                <span className="mt-2 inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 text-brand-caption font-semibold text-[color:var(--dash-muted)]">
+                  Admin
+                </span>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="lecture-page-action dashboard-navy-btn font-sans mt-3 inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50 sm:w-auto lg:w-full"
+                >
+                  {uploadingPhoto ? "Uploading…" : "Change photo"}
+                </button>
+              </div>
             </section>
 
             <nav aria-label="Settings sections" className="dashboard-glass-card rounded-2xl p-2">
@@ -214,8 +219,63 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
             )}
           </div>
         </div>
+        )}
       </div>
     </PortalShell>
+  );
+}
+
+function SettingsFieldSkeleton() {
+  return (
+    <div className="grid min-w-0 gap-2">
+      <SkeletonBlock className="h-3 w-24 max-w-full rounded-full" />
+      <SkeletonBlock className="h-11 w-full rounded-2xl" />
+    </div>
+  );
+}
+
+function AdminSettingsSkeleton() {
+  return (
+    <div
+      className="grid w-full min-w-0 items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(15.5rem,18.75rem)_minmax(0,1fr)]"
+      aria-busy="true"
+      aria-label="Loading settings"
+    >
+      <aside className="flex min-w-0 flex-col gap-3 sm:gap-4">
+        <section className="flex min-w-0 flex-row items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white px-4 py-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:gap-4 sm:px-5 lg:flex-col lg:items-center lg:px-4 lg:py-5">
+          <SkeletonBlock className="h-16 w-16 shrink-0 rounded-full sm:h-20 sm:w-20 lg:h-24 lg:w-24" />
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-2 lg:w-full lg:items-center">
+            <SkeletonBlock className="h-5 w-36 max-w-full rounded-full" />
+            <SkeletonBlock className="h-3.5 w-48 max-w-full rounded-full" />
+            <SkeletonBlock className="h-6 w-16 rounded-full" />
+            <SkeletonBlock className="mt-1 h-10 w-full rounded-full sm:w-36 lg:w-full" />
+          </div>
+        </section>
+        <section className="dashboard-glass-card rounded-2xl p-2">
+          <div className="grid gap-1">
+            <SkeletonBlock className="h-12 w-full rounded-2xl" />
+            <SkeletonBlock className="h-12 w-full rounded-2xl" />
+            <SkeletonBlock className="h-12 w-full rounded-2xl" />
+          </div>
+        </section>
+      </aside>
+      <section className="min-w-0 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white p-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5 md:p-6">
+        <SkeletonBlock className="h-5 w-40 max-w-full rounded-full" />
+        <SkeletonBlock className="mt-2 h-4 w-full max-w-md rounded-full" />
+        <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4">
+          <SettingsFieldSkeleton />
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+            <SettingsFieldSkeleton />
+            <SettingsFieldSkeleton />
+          </div>
+          <SkeletonBlock className="h-16 w-full rounded-2xl" />
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-24" />
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-36" />
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 

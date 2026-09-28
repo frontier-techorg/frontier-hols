@@ -105,7 +105,7 @@ export function formatMoney(amount: number, currency = "USD") {
   }).format(amount);
 }
 
-export function formatDate(value?: string) {
+export function formatDate(value?: string | null) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;

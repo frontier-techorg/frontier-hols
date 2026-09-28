@@ -36,7 +36,7 @@ export function DashboardPageLayout({ children, headerAction }: DashboardPageLay
             <Icon icon={Menu} size={18} />
           </button>
 
-          <h1 className="font-sans min-w-0 overflow-visible py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
+          <h1 className="font-sans min-w-0 truncate py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
             Dashboard
           </h1>
 

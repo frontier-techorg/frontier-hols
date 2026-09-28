@@ -197,13 +197,27 @@ export function AdminSettingsProfilePanel({
         aria-busy="true"
         aria-label="Loading profile"
       >
-        <SkeletonBlock className="h-5 w-40 rounded-full" />
-        <SkeletonBlock className="mt-2 h-4 w-64 rounded-full" />
-        <div className="mt-6 grid gap-4">
-          <SkeletonBlock className="h-11 w-full rounded-2xl" />
-          <div className="grid gap-4 sm:grid-cols-2">
+        <SkeletonBlock className="h-5 w-40 max-w-full rounded-full" />
+        <SkeletonBlock className="mt-2 h-4 w-full max-w-md rounded-full" />
+        <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4">
+          <div className="grid min-w-0 gap-2">
+            <SkeletonBlock className="h-3 w-24 max-w-full rounded-full" />
             <SkeletonBlock className="h-11 w-full rounded-2xl" />
-            <SkeletonBlock className="h-11 w-full rounded-2xl" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+            <div className="grid min-w-0 gap-2">
+              <SkeletonBlock className="h-3 w-20 max-w-full rounded-full" />
+              <SkeletonBlock className="h-11 w-full rounded-2xl" />
+            </div>
+            <div className="grid min-w-0 gap-2">
+              <SkeletonBlock className="h-3 w-20 max-w-full rounded-full" />
+              <SkeletonBlock className="h-11 w-full rounded-2xl" />
+            </div>
+          </div>
+          <SkeletonBlock className="h-16 w-full rounded-2xl" />
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-24" />
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-36" />
           </div>
         </div>
       </section>

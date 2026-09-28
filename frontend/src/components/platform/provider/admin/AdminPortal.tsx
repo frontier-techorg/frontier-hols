@@ -93,58 +93,95 @@ function SkeletonBlock({ className }: { className?: string }) {
   return <span className={cn("dashboard-skeleton-block", className)} aria-hidden />;
 }
 
+function MetricCardSkeleton() {
+  return (
+    <div className="dashboard-glass-card min-h-11 min-w-0 overflow-hidden rounded-2xl px-2.5 py-2.5 sm:px-3.5 sm:py-3 md:px-4 md:py-4">
+      <SkeletonBlock className="h-3 w-16 max-w-full rounded-full" />
+      <SkeletonBlock className="mt-2 h-6 w-20 max-w-full rounded-full sm:h-7" />
+      <div className="mt-2 hidden md:block">
+        <SkeletonBlock className="h-3 w-full max-w-[9rem] rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+function PieCardSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <section className="dashboard-glass-card @container min-w-0 overflow-hidden rounded-2xl p-3.5 sm:p-5">
+      <SkeletonBlock className="h-3 w-16 max-w-full rounded-full" />
+      <SkeletonBlock className="mt-2 h-5 w-36 max-w-full rounded-full sm:h-6" />
+      <div className="mt-4 flex min-w-0 flex-col items-center gap-4 @[20rem]:flex-row @[20rem]:items-center">
+        <SkeletonBlock className="h-36 w-36 shrink-0 rounded-full sm:h-44 sm:w-44" />
+        <div className="grid w-full min-w-0 flex-1 gap-2.5">
+          {Array.from({ length: rows }, (_, index) => (
+            <div key={index} className="flex min-w-0 items-center justify-between gap-3">
+              <SkeletonBlock className="h-3 w-24 max-w-[60%] rounded-full" />
+              <SkeletonBlock className="h-3.5 w-14 shrink-0 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function DashboardSkeleton() {
   return (
     <>
       <div className="grid min-w-0 grid-cols-3 gap-2.5 sm:gap-3" aria-busy="true" aria-label="Loading dashboard">
         {Array.from({ length: 3 }, (_, index) => (
-          <div key={`count-${index}`} className="dashboard-glass-card min-w-0 rounded-2xl px-2.5 py-2.5 sm:px-3.5 sm:py-3 md:px-4 md:py-4">
-            <SkeletonBlock className="h-3 w-12 rounded-full sm:w-16" />
-            <SkeletonBlock className="mt-2 h-6 w-8 rounded-full sm:w-12" />
-          </div>
+          <MetricCardSkeleton key={`count-${index}`} />
         ))}
       </div>
-      <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-4 sm:gap-3">
+      <div className="grid min-w-0 grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={`revenue-${index}`} className="dashboard-glass-card min-w-0 rounded-2xl px-2.5 py-2.5 sm:px-3.5 sm:py-3 md:px-4 md:py-4">
-            <SkeletonBlock className="h-3 w-16 rounded-full" />
-            <SkeletonBlock className="mt-2 h-6 w-20 rounded-full" />
-          </div>
+          <MetricCardSkeleton key={`revenue-${index}`} />
         ))}
       </div>
-      <div className="grid min-w-0 grid-cols-2 gap-2.5 md:grid-cols-4 sm:gap-3">
+      <div className="grid min-w-0 grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div key={`payout-${index}`} className="dashboard-glass-card min-w-0 rounded-2xl px-2.5 py-2.5 sm:px-3.5 sm:py-3 md:px-4 md:py-4">
-            <SkeletonBlock className="h-3 w-16 rounded-full" />
-            <SkeletonBlock className="mt-2 h-6 w-20 rounded-full" />
-          </div>
+          <MetricCardSkeleton key={`payout-${index}`} />
         ))}
       </div>
-      <div className="grid min-w-0 gap-3 sm:gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-3 sm:gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] xl:items-stretch">
         <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
-          <section className="dashboard-glass-card rounded-2xl p-3.5 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <SkeletonBlock className="h-5 w-36 rounded-full" />
-              <SkeletonBlock className="h-10 w-full rounded-full sm:w-48" />
+          <section className="dashboard-glass-card min-w-0 overflow-hidden rounded-2xl p-3.5 sm:p-5">
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <SkeletonBlock className="h-3 w-24 max-w-full rounded-full" />
+                <SkeletonBlock className="mt-2 h-5 w-40 max-w-full rounded-full sm:h-6" />
+              </div>
+              <div className="flex h-10 w-full min-w-0 items-center gap-1 sm:w-auto">
+                <SkeletonBlock className="h-10 min-w-0 flex-1 rounded-full sm:w-24 sm:flex-none" />
+                <SkeletonBlock className="h-10 min-w-0 flex-1 rounded-full sm:w-24 sm:flex-none" />
+                <SkeletonBlock className="h-10 min-w-0 flex-1 rounded-full sm:w-24 sm:flex-none" />
+              </div>
             </div>
-            <SkeletonBlock className="mt-5 h-40 w-full rounded-2xl sm:h-52" />
+            <SkeletonBlock className="mt-4 h-64 w-full rounded-2xl sm:h-72" />
+            <div className="mt-2 flex gap-4">
+              <SkeletonBlock className="h-3 w-16 rounded-full" />
+              <SkeletonBlock className="h-3 w-14 rounded-full" />
+            </div>
           </section>
-          <section className="dashboard-glass-card rounded-2xl p-3.5 sm:p-5">
-            <SkeletonBlock className="h-5 w-32 rounded-full" />
-            <div className="mt-4 space-y-2">
+          <section className="dashboard-glass-card min-w-0 overflow-hidden rounded-2xl p-3.5 sm:p-5">
+            <SkeletonBlock className="h-5 w-36 max-w-[60%] rounded-full sm:h-6" />
+            <div className="mt-3.5 grid min-w-0 gap-1 sm:mt-4">
               {Array.from({ length: 4 }, (_, index) => (
-                <SkeletonBlock key={index} className="h-12 w-full rounded-xl" />
+                <div key={index} className="flex min-w-0 items-start gap-2.5 rounded-xl px-3 py-2.5">
+                  <SkeletonBlock className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <SkeletonBlock className="h-3.5 w-3/5 max-w-full rounded-full" />
+                    <SkeletonBlock className="h-3 w-full rounded-full" />
+                  </div>
+                </div>
               ))}
             </div>
           </section>
         </div>
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-1">
-          {Array.from({ length: 3 }, (_, index) => (
-            <section key={`pie-${index}`} className="dashboard-glass-card rounded-2xl p-3.5 sm:p-5">
-              <SkeletonBlock className="h-4 w-20 rounded-full" />
-              <SkeletonBlock className="mx-auto mt-4 h-36 w-36 rounded-full sm:h-44 sm:w-44" />
-            </section>
-          ))}
+          <PieCardSkeleton />
+          <PieCardSkeleton rows={2} />
+          <PieCardSkeleton rows={2} />
         </div>
       </div>
     </>
