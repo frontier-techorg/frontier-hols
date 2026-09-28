@@ -45,10 +45,13 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
 
     # ---- Environment ----
-    # development | production  (development skips OTP and bypasses the payment processor)
+    # development | production  (development bypasses the payment processor)
     app_env: str = "development"
 
     # ---- OTP ----
+    # true (default): every student, admin, and affiliate login requires OTP
+    # false: login never asks for OTP, regardless of APP_ENV
+    enable_otp: bool = True
     otp_required_after_seconds: int = 604800
     otp_expire_seconds: int = 600
 

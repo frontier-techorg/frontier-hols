@@ -10,7 +10,7 @@ def get_health() -> dict[str, str | bool]:
         "status": "ok",
         "message": "HOLS API is running",
         "environment": settings.environment_name(),
-        "otp_required": not development,
+        "otp_required": settings.enable_otp,
         "payment_required": True,
         "payment_gateway_bypass": development,
     }

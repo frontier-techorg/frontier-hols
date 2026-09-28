@@ -481,16 +481,11 @@ def _generate_otp_code() -> str:
 def otp_is_required(last_login_at: Optional[str], role: str) -> bool:
     """True when the user must verify OTP before receiving auth tokens.
 
-    Applies to admin, affiliate, and student logins.
+    When ENABLE_OTP is true, student, admin, and affiliate logins always
+    require a code, including the first login. APP_ENV does not change this.
     """
-    _ = role
-    if settings.is_development():
-        return False
-    if not last_login_at:
-        return True
-    last_login = _parse_iso(last_login_at)
-    elapsed = (_utcnow() - last_login).total_seconds()
-    return elapsed >= settings.otp_required_after_seconds
+    _ = (last_login_at, role)
+    return bool(settings.enable_otp)
 
 
 _OTP_EMAIL_ACTIONS = {

@@ -254,7 +254,7 @@ export function AffiliateReferralsPage() {
             ) : students.length === 0 ? (
               <div className="flex flex-col items-center px-5 py-12 text-center sm:py-14">
                 <span className="dashboard-tool-icon flex h-14 w-14 items-center justify-center rounded-full text-[color:var(--dash-text)]">
-                  <SidebarSvgIcon name="referrals" size={22} strokeWidth={1.85} />
+                  <SidebarSvgIcon name="users" size={22} strokeWidth={1.85} />
                 </span>
                 <p className="font-sans mt-4 text-base font-semibold text-[color:var(--dash-text)] sm:text-lg">
                   No customers yet

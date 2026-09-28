@@ -469,11 +469,7 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
             </div>
 
             {busy ? (
-              <div className="space-y-2 px-4 pb-5 sm:px-5" aria-busy="true" aria-label="Loading students">
-                {Array.from({ length: 3 }, (_, i) => (
-                  <span key={i} className="dashboard-skeleton-block block h-16 w-full rounded-xl" />
-                ))}
-              </div>
+              <StudentsDirectorySkeleton />
             ) : visibleStudents.length === 0 ? (
               <div className="flex flex-col items-center px-5 py-12 text-center sm:py-14">
                 <span className="dashboard-tool-icon flex h-14 w-14 items-center justify-center rounded-full text-[color:var(--dash-text)]">
@@ -496,7 +492,7 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
               </div>
             ) : (
               <>
-                <ul className="grid gap-2.5 px-3.5 pb-4 sm:gap-3 sm:px-5 md:hidden">
+                <ul className="grid gap-2.5 px-3.5 py-4 sm:gap-3 sm:px-5 md:hidden">
                   {visibleStudents.map((student) => {
                     const currency = student.spend_currency || spendCurrency;
                     return (
@@ -523,26 +519,26 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                     );
                   })}
                 </ul>
-                <div className="hidden min-w-0 overflow-x-auto md:block">
-                  <table className="w-full min-w-[40rem] border-separate border-spacing-0 text-left">
+                <div className="hidden min-w-0 overflow-x-hidden md:block">
+                  <table className="w-full table-fixed border-separate border-spacing-0 text-left">
                     <thead>
                       <tr className="bg-[color:var(--dash-soft)] text-brand-caption font-semibold uppercase tracking-[0.06em] text-[color:var(--dash-faint)]">
-                        <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                        <th scope="col" className="w-[32%] px-4 py-3 font-semibold sm:px-5">
                           Student
                         </th>
-                        <th scope="col" className="px-3 py-3 font-semibold">
+                        <th scope="col" className="w-[14%] px-3 py-3 font-semibold">
                           Plan
                         </th>
-                        <th scope="col" className="px-3 py-3 font-semibold">
+                        <th scope="col" className="w-[16%] px-3 py-3 font-semibold">
                           Spent
                         </th>
-                        <th scope="col" className="px-3 py-3 font-semibold">
+                        <th scope="col" className="w-[18%] px-3 py-3 font-semibold">
                           Your earnings
                         </th>
-                        <th scope="col" className="px-3 py-3 font-semibold">
+                        <th scope="col" className="w-[10%] px-3 py-3 font-semibold">
                           Orders
                         </th>
-                        <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                        <th scope="col" className="w-[10%] px-4 py-3 font-semibold sm:px-5">
                           Action
                         </th>
                       </tr>
@@ -585,17 +581,17 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                               </div>
                             </td>
                             <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                              <span className="text-brand-caption inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
+                              <span className="text-brand-caption inline-flex max-w-full truncate rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
                                 {planLabel(student.current_plan)}
                               </span>
                             </td>
                             <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                              <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                              <span className="font-sans block truncate text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
                                 {formatMoney(student.total_spent ?? 0, currency)}
                               </span>
                             </td>
                             <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                              <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-accent)]">
+                              <span className="font-sans block truncate text-sm font-semibold tabular-nums text-[color:var(--dash-accent)]">
                                 {formatMoney(
                                   student.admin_earned ?? student.total_spent ?? 0,
                                   currency,
@@ -603,7 +599,7 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                               </span>
                             </td>
                             <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                              <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                              <span className="font-sans block truncate text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
                                 {student.paid_order_count ?? student.order_count ?? 0}
                               </span>
                             </td>
@@ -670,5 +666,69 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
         </DashRightDrawer>
       ) : null}
     </PortalShell>
+  );
+}
+
+function StudentsDirectorySkeleton() {
+  const columns = ["w-[32%]", "w-[14%]", "w-[16%]", "w-[18%]", "w-[10%]", "w-[10%]"];
+
+  return (
+    <div aria-busy="true" aria-label="Loading students">
+      <ul className="grid gap-2.5 px-3.5 py-4 sm:gap-3 sm:px-5 md:hidden">
+        {Array.from({ length: 4 }, (_, index) => (
+          <li key={index} className="min-w-0 overflow-hidden rounded-2xl bg-[color:var(--dash-soft)]/80 px-4 py-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="dashboard-skeleton-block h-10 w-10 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <span className="dashboard-skeleton-block block h-3.5 w-[62%] max-w-full rounded-full" />
+                <span className="dashboard-skeleton-block block h-3 w-[78%] max-w-full rounded-full" />
+              </div>
+              <span className="dashboard-skeleton-block h-4 w-4 shrink-0 rounded-full" />
+            </div>
+            <div className="mt-3.5 grid grid-cols-2 gap-x-3 gap-y-2.5">
+              {Array.from({ length: 5 }, (_, field) => (
+                <div key={field} className="min-w-0 space-y-1.5">
+                  <span className="dashboard-skeleton-block block h-2.5 w-14 max-w-full rounded-full" />
+                  <span className="dashboard-skeleton-block block h-3.5 w-20 max-w-full rounded-full" />
+                </div>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden min-w-0 overflow-x-hidden md:block">
+        <table className="w-full table-fixed border-separate border-spacing-0 text-left">
+          <thead>
+            <tr className="bg-[color:var(--dash-soft)]">
+              {columns.map((width, index) => (
+                <th key={index} className={cn("px-3 py-3 first:pl-5 last:pr-5", width)}>
+                  <span className="dashboard-skeleton-block block h-3 w-16 max-w-full rounded-full" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 5 }, (_, index) => (
+              <tr key={index}>
+                <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="dashboard-skeleton-block h-9 w-9 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <span className="dashboard-skeleton-block block h-3.5 w-[70%] max-w-full rounded-full" />
+                      <span className="dashboard-skeleton-block block h-3 w-[86%] max-w-full rounded-full" />
+                    </div>
+                  </div>
+                </td>
+                {columns.slice(1).map((width, cell) => (
+                  <td key={cell} className={cn("border-t border-[color:var(--dash-surface-border)] px-3 py-3 last:pr-5", width)}>
+                    <span className="dashboard-skeleton-block block h-4 w-14 max-w-full rounded-full" />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

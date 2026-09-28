@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon, Eye, EyeOff } from "@/components/icons";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { AuthButton } from "@/components/platform/auth/AuthButton";
@@ -28,6 +28,7 @@ import { enterPortal } from "@/lib/integrate/auth/session";
 import { cn } from "@/lib/utils";
 
 const RESEND_COOLDOWN_SEC = 30;
+const OTP_LENGTH = 6;
 
 function formatCountdown(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -58,17 +59,24 @@ export function LoginForm({
 
   const [otpStep, setOtpStep] = useState(false);
   const [otpToken, setOtpToken] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpMessage, setOtpMessage] = useState("");
+  const [otpDigits, setOtpDigits] = useState<string[]>(() => Array.from({ length: OTP_LENGTH }, () => ""));
+  const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const otpCode = otpDigits.join("");
+  const otpComplete = otpDigits.every((digit) => digit.length === 1);
   const [resendLoading, setResendLoading] = useState(false);
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  function enterOtpStep(token: string, message: string, expiresIn: number) {
+  function focusOtpBox(index: number) {
+    const box = otpRefs.current[index];
+    box?.focus();
+    box?.select();
+  }
+
+  function enterOtpStep(token: string, _message: string, expiresIn: number) {
     setOtpToken(token);
-    setOtpMessage(message);
-    setOtpCode("");
+    setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ""));
     setOtpStep(true);
     onOtpStepChange?.(true);
     const safeExpires = Math.max(1, expiresIn || 300);
@@ -79,7 +87,7 @@ export function LoginForm({
 
   function leaveOtpStep() {
     setOtpStep(false);
-    setOtpCode("");
+    setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ""));
     setError(null);
     setInfo(null);
     setExpiresAt(null);
@@ -181,8 +189,9 @@ export function LoginForm({
     try {
       const result = await resendOtp(otpToken);
       setOtpToken(result.otp_token);
-      setOtpMessage(result.message);
+      setOtpDigits(Array.from({ length: OTP_LENGTH }, () => ""));
       setInfo("A new code was sent to your email.");
+      window.setTimeout(() => focusOtpBox(0), 0);
       const safeExpires = Math.max(1, result.expires_in || 300);
       setExpiresAt(Date.now() + safeExpires * 1000);
       setSecondsLeft(safeExpires);
@@ -194,53 +203,109 @@ export function LoginForm({
     }
   }
 
+  function applyOtpDigits(index: number, raw: string) {
+    const clean = raw.replace(/\D/g, "");
+    if (!clean) return;
+
+    setOtpDigits((current) => {
+      const next = [...current];
+      for (let offset = 0; offset < clean.length && index + offset < OTP_LENGTH; offset += 1) {
+        next[index + offset] = clean[offset];
+      }
+      return next;
+    });
+    focusOtpBox(Math.min(index + clean.length, OTP_LENGTH - 1));
+  }
+
+  function clearOtpDigit(index: number) {
+    setOtpDigits((current) => {
+      const next = [...current];
+      next[index] = "";
+      return next;
+    });
+  }
+
+  function handleOtpKeyDown(index: number, event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Backspace" || event.key === "Delete") {
+      event.preventDefault();
+      if (otpDigits[index]) {
+        clearOtpDigit(index);
+        return;
+      }
+      if (event.key === "Backspace" && index > 0) {
+        clearOtpDigit(index - 1);
+        focusOtpBox(index - 1);
+      }
+      return;
+    }
+
+    if (event.key === "ArrowLeft" && index > 0) {
+      event.preventDefault();
+      focusOtpBox(index - 1);
+    }
+
+    if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) {
+      event.preventDefault();
+      focusOtpBox(index + 1);
+    }
+  }
+
   if (otpStep) {
     const expired = secondsLeft <= 0;
 
     return (
       <form className={cn("w-full", className)} onSubmit={handleOtpSubmit}>
-        <p className={authHelperTextClass}>
-          {otpMessage || "Check your email for a 6-digit code."}
-        </p>
-
-        <div className="mt-6 grid gap-5">
+        <div className="grid gap-5">
           {info ? <AuthAlert variant="info">{info}</AuthAlert> : null}
           {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
           {expired ? (
             <AuthAlert variant="error">This code has expired. Please resend a new one.</AuthAlert>
           ) : (
-            <p className={cn(authHelperTextClass, "text-center tabular-nums text-primary/60")}>
+            <p className={cn(authHelperTextClass, "text-center text-sm tabular-nums text-primary/60")}>
               Code expires in {formatCountdown(secondsLeft)}
             </p>
           )}
 
           <div className="grid gap-2">
-            <label htmlFor="otp" className={authLabelClass}>
+            <span id="otp-label" className={authLabelClass}>
               Verification code
-            </label>
-            <input
-              id="otp"
-              name="otp"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              autoFocus
-              required
-              maxLength={6}
-              pattern="\d{6}"
-              placeholder="••••••"
-              value={otpCode}
-              onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-              className={cn(
-                authFieldClass,
-                "auth-otp-field px-3 text-center font-semibold",
-              )}
-            />
+            </span>
+            <div
+              className="grid grid-cols-6 gap-2 sm:gap-2.5"
+              role="group"
+              aria-labelledby="otp-label"
+            >
+              {Array.from({ length: OTP_LENGTH }, (_, index) => (
+                <input
+                  key={index}
+                  ref={(node) => {
+                    otpRefs.current[index] = node;
+                  }}
+                  id={index === 0 ? "otp" : undefined}
+                  name={index === 0 ? "otp" : undefined}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete={index === 0 ? "one-time-code" : "off"}
+                  autoFocus={index === 0}
+                  aria-label={`Digit ${index + 1}`}
+                  maxLength={OTP_LENGTH}
+                  value={otpDigits[index] ?? ""}
+                  onChange={(event) => applyOtpDigits(index, event.target.value)}
+                  onKeyDown={(event) => handleOtpKeyDown(index, event)}
+                  onFocus={(event) => event.currentTarget.select()}
+                  onPaste={(event) => {
+                    event.preventDefault();
+                    applyOtpDigits(index, event.clipboardData.getData("text"));
+                  }}
+                  className={cn(authFieldClass, "auth-otp-box")}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
         <div className="mt-7 grid gap-3">
-          <AuthButton type="submit" disabled={loading || otpCode.length !== 6 || expired}>
+          <AuthButton type="submit" disabled={loading || !otpComplete || expired}>
             {loading ? "Verifying…" : "Verify"}
           </AuthButton>
           <div className={cn("flex items-center justify-between gap-3", authHelperTextClass)}>

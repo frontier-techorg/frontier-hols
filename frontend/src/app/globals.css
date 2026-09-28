@@ -467,11 +467,18 @@ html:has(.portal-shell[data-theme="dark"]) .payment-page .payment-field:focus {
   padding-right: 2.5rem;
 }
 
-.auth-panel input.auth-otp-field {
-  height: 2.75rem;
-  min-height: 2.75rem;
+.auth-panel input.auth-otp-box {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border-color: rgba(21, 39, 68, 0.45);
   font-size: 1.125rem;
-  letter-spacing: 0.28em;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
 }
 
 /* Compact login / register submit control */

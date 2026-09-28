@@ -38,7 +38,9 @@ async def lifespan(app: FastAPI):
     setup_logging(level=settings.log_level, log_format=settings.log_format)  # type: ignore[arg-type]
     logger.info("Starting HOLS API")
     if settings.is_development():
-        logger.warning("Development mode: OTP is skipped and the payment gateway is bypassed")
+        logger.warning("Development mode: the payment gateway is bypassed")
+    if not settings.enable_otp:
+        logger.warning("ENABLE_OTP is false: login will not require an OTP code")
     await create_table_async()
     await ensure_default_plans()
     await ensure_payout_settings()

@@ -39,7 +39,7 @@ def send_email(
     """
     if not html_body and not text_body:
         raise ValueError("Provide at least one of html_body or text_body.")
-
+        
     recipients = [to] if isinstance(to, str) else list(to)
     sender = from_address or settings.ses_from
 

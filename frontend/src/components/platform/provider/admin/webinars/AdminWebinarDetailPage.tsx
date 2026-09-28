@@ -250,13 +250,15 @@ export function AdminWebinarDetailPage({ webinarId }: { webinarId: string }) {
           </div>
         </header>
 
-        <div className="grid gap-3 sm:gap-4">
+        <div className="grid w-full min-w-0 gap-3 sm:gap-4">
           {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
           {success ? <AuthAlert variant="success">{success}</AuthAlert> : null}
 
-          {loading || !webinar ? (
+          {loading ? (
+            <WebinarDetailSkeleton />
+          ) : !webinar ? (
             <div className="dashboard-glass-card rounded-2xl p-10 text-center text-[color:var(--dash-faint)]">
-              {loading ? "Loading…" : "Webinar not found."}
+              Webinar not found.
             </div>
           ) : (
             <>
@@ -408,9 +410,7 @@ export function AdminWebinarDetailPage({ webinarId }: { webinarId: string }) {
                 </div>
                 <div className="mt-4 grid min-w-0 gap-2.5">
                   {registrantsLoading && registrants.length === 0 ? (
-                    <p className="text-brand-body py-6 text-center text-[color:var(--dash-faint)]">
-                      Loading…
-                    </p>
+                    <RegistrantListSkeleton />
                   ) : registrants.length === 0 ? (
                     <p className="text-brand-body py-6 text-center text-[color:var(--dash-faint)]">
                       No bookings yet.
@@ -466,5 +466,61 @@ export function AdminWebinarDetailPage({ webinarId }: { webinarId: string }) {
         </div>
       </div>
     </PortalShell>
+  );
+}
+
+function WebinarDetailSkeleton() {
+  return (
+    <div className="grid w-full min-w-0 gap-3 sm:gap-4" aria-busy="true" aria-label="Loading webinar">
+      <section className="dashboard-glass-card min-w-0 rounded-2xl p-4 sm:p-6">
+        <span className="dashboard-skeleton-block block h-5 w-24 rounded-full" />
+        <div className="mt-4 grid min-w-0 gap-4 md:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)]">
+          <span className="dashboard-skeleton-block block h-36 w-full rounded-2xl sm:h-40 md:h-[11.5rem]" />
+          <div className="grid min-w-0 gap-4">
+            <span className="dashboard-skeleton-block block h-10 w-full rounded-xl" />
+            <span className="dashboard-skeleton-block block h-10 w-full rounded-xl" />
+            <span className="dashboard-skeleton-block block h-10 w-full rounded-xl" />
+          </div>
+        </div>
+        <span className="dashboard-skeleton-block mt-4 block h-24 w-full rounded-xl" />
+        <span className="dashboard-skeleton-block mt-4 block h-10 w-full rounded-xl" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <span className="dashboard-skeleton-block block h-10 w-full rounded-xl" />
+          <span className="dashboard-skeleton-block block h-10 w-full rounded-xl" />
+        </div>
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <span className="dashboard-skeleton-block h-10 w-full rounded-full sm:w-24" />
+          <span className="dashboard-skeleton-block h-10 w-full rounded-full sm:w-36" />
+        </div>
+      </section>
+      <section className="dashboard-glass-card min-w-0 rounded-2xl p-4 sm:p-6">
+        <div className="flex items-end justify-between gap-2">
+          <span className="dashboard-skeleton-block block h-5 w-28 rounded-full" />
+          <span className="dashboard-skeleton-block block h-3 w-16 rounded-full" />
+        </div>
+        <div className="mt-4">
+          <RegistrantListSkeleton />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function RegistrantListSkeleton() {
+  return (
+    <div className="grid min-w-0 gap-2.5" aria-busy="true" aria-label="Loading registrants">
+      {Array.from({ length: 3 }, (_, index) => (
+        <div
+          key={index}
+          className="flex min-w-0 flex-col gap-3 rounded-2xl bg-[color:var(--dash-soft)]/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="min-w-0 flex-1 space-y-2">
+            <span className="dashboard-skeleton-block block h-4 w-40 max-w-full rounded-full" />
+            <span className="dashboard-skeleton-block block h-3 w-52 max-w-full rounded-full" />
+          </div>
+          <span className="dashboard-skeleton-block h-10 w-full rounded-full sm:w-32" />
+        </div>
+      ))}
+    </div>
   );
 }

@@ -236,24 +236,7 @@ export function AdminWebinarsPage() {
           </div>
 
           {loading ? (
-            <div
-              className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
-              aria-busy="true"
-              aria-label="Loading webinars"
-            >
-              {Array.from({ length: 3 }, (_, index) => (
-                <div
-                  key={index}
-                  className="dashboard-glass-card overflow-hidden rounded-2xl"
-                >
-                  <span className="dashboard-skeleton-block block aspect-[16/9] w-full rounded-none" />
-                  <div className="space-y-2 p-4">
-                    <span className="dashboard-skeleton-block block h-5 w-3/4 rounded-full" />
-                    <span className="dashboard-skeleton-block block h-4 w-1/2 rounded-full" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <WebinarCatalogSkeleton />
           ) : emptyCatalog ? (
             <section className="dashboard-glass-card flex flex-col items-center rounded-2xl px-5 py-12 text-center sm:py-14">
               <span className="dashboard-tool-icon flex h-14 w-14 items-center justify-center rounded-full text-[color:var(--dash-text)]">
@@ -384,5 +367,33 @@ export function AdminWebinarsPage() {
         onSubmit={(values) => void handleCreate(values)}
       />
     </PortalShell>
+  );
+}
+
+function WebinarCatalogSkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
+      aria-busy="true"
+      aria-label="Loading webinars"
+    >
+      {Array.from({ length: 3 }, (_, index) => (
+        <div key={index} className="dashboard-glass-card flex min-w-0 flex-col overflow-hidden rounded-2xl">
+          <span className="dashboard-skeleton-block block aspect-[16/9] w-full rounded-none" />
+          <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+            <div className="min-w-0 space-y-2">
+              <span className="dashboard-skeleton-block block h-5 w-4/5 max-w-full rounded-full" />
+              <span className="dashboard-skeleton-block block h-3.5 w-1/2 max-w-full rounded-full" />
+              <span className="dashboard-skeleton-block block h-3 w-2/3 max-w-full rounded-full" />
+              <span className="dashboard-skeleton-block block h-3 w-full rounded-full" />
+            </div>
+            <div className="mt-auto flex min-w-0 gap-2">
+              <span className="dashboard-skeleton-block h-10 min-w-0 flex-1 rounded-full" />
+              <span className="dashboard-skeleton-block h-10 min-w-0 flex-1 rounded-full" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

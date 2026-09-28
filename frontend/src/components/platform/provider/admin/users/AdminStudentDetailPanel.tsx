@@ -86,7 +86,7 @@ export function AdminStudentDetailPanel({
           {initials(student.first_name, student.last_name)}
         </span>
         <div className="min-w-0">
-          <p className="font-sans truncate text-base font-semibold text-[color:var(--dash-text)]">
+          <p className="font-sans break-words text-base font-semibold text-[color:var(--dash-text)]">
             {personName(student.first_name, student.last_name, "Student")}
           </p>
           <p className="text-brand-body mt-0.5 break-all text-sm text-[color:var(--dash-muted)]">
@@ -100,7 +100,7 @@ export function AdminStudentDetailPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 min-[22rem]:grid-cols-2">
         <DataField label="Spent" value={formatMoney(student.total_spent ?? 0, spendCurrency)} />
         <DataField
           label="Your earnings"
@@ -120,7 +120,7 @@ export function AdminStudentDetailPanel({
         {showAffiliate ? (
           <DataField
             label="Affiliate"
-            className="col-span-2"
+            className="min-[22rem]:col-span-2"
             value={
               referredName ??
               (student.referred_by_affiliate_id ? student.referred_by_affiliate_id : "Direct signup")
@@ -129,7 +129,7 @@ export function AdminStudentDetailPanel({
         ) : null}
         <DataField
           label="Last purchase"
-          className="col-span-2"
+          className="min-[22rem]:col-span-2"
           value={
             student.last_purchase_at
               ? `${formatDate(student.last_purchase_at)}${
@@ -157,9 +157,20 @@ export function AdminStudentDetailPanel({
           ) : null}
         </div>
         {ordersLoading ? (
-          <div className="space-y-2" aria-busy="true" aria-label="Loading orders">
-            {Array.from({ length: 3 }, (_, i) => (
-              <span key={i} className="dashboard-skeleton-block block h-12 w-full rounded-xl" />
+          <div className="grid min-w-0 gap-2.5" aria-busy="true" aria-label="Loading orders">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} className="min-w-0 rounded-2xl bg-[color:var(--dash-soft)]/80 px-4 py-4">
+                <span className="dashboard-skeleton-block block h-4 w-28 max-w-full rounded-full" />
+                <span className="dashboard-skeleton-block mt-2 block h-3 w-40 max-w-full rounded-full" />
+                <div className="mt-3 grid grid-cols-1 gap-2 min-[22rem]:grid-cols-2">
+                  {Array.from({ length: 3 }, (_, field) => (
+                    <div key={field} className={cn("min-w-0 space-y-1.5", field === 2 && "min-[22rem]:col-span-2")}>
+                      <span className="dashboard-skeleton-block block h-2.5 w-14 max-w-full rounded-full" />
+                      <span className="dashboard-skeleton-block block h-3.5 w-20 max-w-full rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         ) : orders.length === 0 ? (
@@ -182,7 +193,7 @@ export function AdminStudentDetailPanel({
                 <p className="text-brand-caption mt-1 text-[color:var(--dash-muted)]">
                   {orderPlanName(order)} · {orderKindLabel(order)}
                 </p>
-                <dl className="mt-3 grid grid-cols-2 gap-2 text-brand-caption">
+                <dl className="mt-3 grid grid-cols-1 gap-2 text-brand-caption min-[22rem]:grid-cols-2">
                   <div>
                     <dt className="text-[color:var(--dash-faint)]">Status</dt>
                     <dd className="mt-0.5 font-semibold text-[color:var(--dash-text)]">
@@ -195,7 +206,7 @@ export function AdminStudentDetailPanel({
                       {formatMoney(order.amount, order.currency || spendCurrency)}
                     </dd>
                   </div>
-                  <div className="col-span-2">
+                  <div className="min-[22rem]:col-span-2">
                     <dt className="text-[color:var(--dash-faint)]">Date</dt>
                     <dd className="mt-0.5 font-medium text-[color:var(--dash-muted)]">
                       {formatDate(order.created_at)}

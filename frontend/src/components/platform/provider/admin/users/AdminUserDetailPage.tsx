@@ -125,6 +125,98 @@ function DashField({
   );
 }
 
+function UserDetailSkeleton() {
+  return (
+    <div className="grid w-full min-w-0 gap-3 sm:gap-4" aria-busy="true" aria-label="Loading profile">
+      <section className="dashboard-hero overflow-hidden rounded-2xl p-3.5 sm:p-5 md:p-6">
+        <div className="flex min-w-0 flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-5">
+          <span className="dashboard-skeleton-block h-14 w-14 shrink-0 rounded-2xl sm:h-20 sm:w-20" />
+          <div className="flex w-full min-w-0 flex-col items-center gap-2 sm:items-start">
+            <span className="dashboard-skeleton-block h-3 w-28 max-w-full rounded-full" />
+            <span className="dashboard-skeleton-block h-7 w-48 max-w-full rounded-full sm:h-8" />
+            <span className="dashboard-skeleton-block h-3.5 w-56 max-w-full rounded-full" />
+          </div>
+        </div>
+      </section>
+      <section className="dashboard-surface min-w-0 rounded-2xl p-3.5 sm:p-5 md:p-6">
+        <span className="dashboard-skeleton-block block h-3 w-16 rounded-full" />
+        <span className="dashboard-skeleton-block mt-2 block h-5 w-24 rounded-full" />
+        <div className="mt-4 grid gap-3">
+          {Array.from({ length: 5 }, (_, index) => (
+            <div key={index} className="flex min-w-0 items-center justify-between gap-3">
+              <span className="dashboard-skeleton-block h-3 w-20 max-w-[40%] rounded-full" />
+              <span className="dashboard-skeleton-block h-3.5 w-32 max-w-[50%] rounded-full" />
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="dashboard-surface min-w-0 rounded-2xl p-3.5 sm:p-5 md:p-6">
+        <span className="dashboard-skeleton-block block h-3 w-20 rounded-full" />
+        <span className="dashboard-skeleton-block mt-2 block h-5 w-44 max-w-full rounded-full" />
+        <div className="mt-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <span key={index} className="dashboard-skeleton-block h-16 rounded-xl" />
+          ))}
+        </div>
+        <MoneyRowsSkeleton columns={["w-[18%]", "w-[22%]", "w-[16%]", "w-[14%]", "w-[14%]", "w-[16%]"]} />
+      </section>
+    </div>
+  );
+}
+
+function MoneyRowsSkeleton({ columns }: { columns: string[] }) {
+  return (
+    <div className="mt-5">
+      <ul className="grid gap-2.5 md:hidden">
+        {Array.from({ length: 3 }, (_, index) => (
+          <li key={index} className="min-w-0 rounded-2xl bg-[color:var(--dash-soft)]/80 px-4 py-4">
+            <span className="dashboard-skeleton-block block h-4 w-28 max-w-full rounded-full" />
+            <span className="dashboard-skeleton-block mt-2 block h-3 w-40 max-w-full rounded-full" />
+            <div className="mt-3 grid grid-cols-1 gap-2 min-[22rem]:grid-cols-2">
+              {Array.from({ length: 3 }, (_, field) => (
+                <div key={field} className={cn("min-w-0 space-y-1.5", field === 2 && "min-[22rem]:col-span-2")}>
+                  <span className="dashboard-skeleton-block block h-2.5 w-14 max-w-full rounded-full" />
+                  <span className="dashboard-skeleton-block block h-3.5 w-20 max-w-full rounded-full" />
+                </div>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden min-w-0 overflow-x-hidden md:block">
+        <table className="w-full table-fixed border-separate border-spacing-0 text-left">
+          <thead>
+            <tr className="bg-[color:var(--dash-soft)]">
+              {columns.map((width, index) => (
+                <th key={index} className={cn("px-3 py-3 first:px-5", width)}>
+                  <span className="dashboard-skeleton-block block h-3 w-16 max-w-full rounded-full" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 4 }, (_, index) => (
+              <tr key={index}>
+                {columns.map((width, cell) => (
+                  <td
+                    key={cell}
+                    className={cn(
+                      "border-t border-[color:var(--dash-surface-border)] px-3 py-3 first:px-5 last:pr-5",
+                      width,
+                    )}
+                  >
+                    <span className="dashboard-skeleton-block block h-4 w-16 max-w-full rounded-full" />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
   const searchParams = useSearchParams();
   const focusOrder = searchParams.get("order")?.trim() || "";
@@ -355,9 +447,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
           {success ? <AuthAlert variant="success">{success}</AuthAlert> : null}
 
           {loading ? (
-            <div className="dashboard-surface rounded-2xl p-10 text-center" aria-busy="true">
-              <span className="dashboard-skeleton-block mx-auto block h-8 w-8 rounded-full" />
-            </div>
+            <UserDetailSkeleton />
           ) : (
             <>
               <section className="dashboard-hero relative overflow-hidden rounded-2xl p-3.5 sm:p-5 md:p-6">
@@ -634,9 +724,9 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
 
                   <div className="mt-5">
                     {ordersLoading && orders.length === 0 ? (
-                      <p className="text-brand-body py-6 text-center text-[color:var(--dash-faint)]">
-                        Loading orders…
-                      </p>
+                      <MoneyRowsSkeleton
+                        columns={["w-[18%]", "w-[22%]", "w-[16%]", "w-[14%]", "w-[14%]", "w-[16%]"]}
+                      />
                     ) : orders.length === 0 ? (
                       <p className="text-brand-body py-6 text-center text-[color:var(--dash-faint)]">
                         No purchases on this account yet.
@@ -661,7 +751,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                               <p className="text-brand-caption mt-1 text-[color:var(--dash-muted)]">
                                 {orderPlanName(order)} · {orderKindLabel(order)}
                               </p>
-                              <dl className="mt-3 grid grid-cols-2 gap-2 text-brand-caption">
+                              <dl className="mt-3 grid grid-cols-1 gap-2 text-brand-caption min-[22rem]:grid-cols-2">
                                 <div>
                                   <dt className="text-[color:var(--dash-faint)]">Status</dt>
                                   <dd className="mt-0.5 font-semibold text-[color:var(--dash-text)]">
@@ -674,7 +764,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                                     {formatMoney(order.amount, order.currency)}
                                   </dd>
                                 </div>
-                                <div className="col-span-2">
+                                <div className="min-[22rem]:col-span-2">
                                   <dt className="text-[color:var(--dash-faint)]">Date</dt>
                                   <dd className="mt-0.5 font-medium text-[color:var(--dash-muted)]">
                                     {formatDate(order.created_at)}
@@ -684,26 +774,26 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                             </li>
                           ))}
                         </ul>
-                        <div className="hidden min-w-0 overflow-x-auto md:block">
-                          <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-left">
+                        <div className="hidden min-w-0 overflow-x-hidden md:block">
+                          <table className="w-full table-fixed border-separate border-spacing-0 text-left">
                             <thead>
                               <tr className="bg-[color:var(--dash-soft)] text-brand-caption font-semibold uppercase tracking-[0.06em] text-[color:var(--dash-faint)]">
-                                <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                                <th scope="col" className="w-[18%] px-4 py-3 font-semibold sm:px-5">
                                   Order ID
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[22%] px-3 py-3 font-semibold">
                                   Plan
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[16%] px-3 py-3 font-semibold">
                                   Type
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[14%] px-3 py-3 font-semibold">
                                   Status
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[14%] px-3 py-3 font-semibold">
                                   Amount
                                 </th>
-                                <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                                <th scope="col" className="w-[16%] px-4 py-3 font-semibold sm:px-5">
                                   Date
                                 </th>
                               </tr>
@@ -721,32 +811,32 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                                   )}
                                 >
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
-                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                    <span className="font-sans block truncate text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
                                       #{order.order_id.slice(0, 10)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="font-sans text-sm font-semibold text-[color:var(--dash-text)]">
+                                    <span className="font-sans block truncate text-sm font-semibold text-[color:var(--dash-text)]">
                                       {orderPlanName(order)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="text-brand-caption font-medium text-[color:var(--dash-muted)]">
+                                    <span className="text-brand-caption block truncate font-medium text-[color:var(--dash-muted)]">
                                       {orderKindLabel(order)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="text-brand-caption inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
+                                    <span className="text-brand-caption inline-flex max-w-full truncate rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
                                       {orderStatusLabel(order.status)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
+                                    <span className="font-sans block truncate text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
                                       {formatMoney(order.amount, order.currency)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
-                                    <span className="text-brand-caption whitespace-nowrap text-[color:var(--dash-muted)]">
+                                    <span className="text-brand-caption block truncate text-[color:var(--dash-muted)]">
                                       {formatDate(order.created_at)}
                                     </span>
                                   </td>
@@ -838,9 +928,9 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
 
                   <div className="mt-5">
                     {moneyLoading && !earnings ? (
-                      <p className="text-brand-body py-6 text-center text-[color:var(--dash-faint)]">
-                        Loading earnings…
-                      </p>
+                      <MoneyRowsSkeleton
+                        columns={["w-[16%]", "w-[16%]", "w-[14%]", "w-[14%]", "w-[16%]", "w-[14%]", "w-[10%]"]}
+                      />
                     ) : !earnings?.items.length ? (
                       <p className="text-brand-body py-6 text-center text-[color:var(--dash-faint)]">
                         No commissionable orders yet.
@@ -900,29 +990,29 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                             </li>
                           ))}
                         </ul>
-                        <div className="hidden min-w-0 overflow-x-auto md:block">
-                          <table className="w-full min-w-[52rem] border-separate border-spacing-0 text-left">
+                        <div className="hidden min-w-0 overflow-x-hidden md:block">
+                          <table className="w-full table-fixed border-separate border-spacing-0 text-left">
                             <thead>
                               <tr className="bg-[color:var(--dash-soft)] text-brand-caption font-semibold uppercase tracking-[0.06em] text-[color:var(--dash-faint)]">
-                                <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                                <th scope="col" className="w-[16%] px-4 py-3 font-semibold sm:px-5">
                                   Order ID
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[16%] px-3 py-3 font-semibold">
                                   Plan
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[14%] px-3 py-3 font-semibold">
                                   Status
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[14%] px-3 py-3 font-semibold">
                                   Order
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[16%] px-3 py-3 font-semibold">
                                   Commission
                                 </th>
-                                <th scope="col" className="px-3 py-3 font-semibold">
+                                <th scope="col" className="w-[14%] px-3 py-3 font-semibold">
                                   Date
                                 </th>
-                                <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                                <th scope="col" className="w-[10%] px-4 py-3 font-semibold sm:px-5">
                                   Action
                                 </th>
                               </tr>
@@ -934,34 +1024,34 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                                   className="orders-table-row outline-none transition hover:bg-[color:var(--dash-soft)]"
                                 >
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
-                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                    <span className="font-sans block truncate text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
                                       #{item.order_id.slice(0, 10)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="font-sans text-sm font-semibold text-[color:var(--dash-text)]">
+                                    <span className="font-sans block truncate text-sm font-semibold text-[color:var(--dash-text)]">
                                       {item.plan_type
                                         ? planLabels[item.plan_type as PlanType] ?? item.plan_type
                                         : "Order"}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="text-brand-caption inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
+                                    <span className="text-brand-caption inline-flex max-w-full truncate rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
                                       {orderStatusLabel(item.status)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                    <span className="font-sans block truncate text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
                                       {formatMoney(item.amount, item.currency)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
+                                    <span className="font-sans block truncate text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
                                       +{formatMoney(item.commission, item.currency)}
                                     </span>
                                   </td>
                                   <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                                    <span className="text-brand-caption whitespace-nowrap text-[color:var(--dash-muted)]">
+                                    <span className="text-brand-caption block truncate text-[color:var(--dash-muted)]">
                                       {formatDate(item.created_at)}
                                     </span>
                                   </td>
