@@ -5,16 +5,37 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
+import { Button } from "@/components/ui/Button";
 import { ApiRequestError } from "@/lib/integrate/client";
 import {
   submitLessonQuiz,
   type LessonQuizResult,
   type LessonVariant,
 } from "@/lib/integrate/provider/student/lectures";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
 import { cn } from "@/lib/utils";
 
 const PRESTART_SECONDS = 3;
 const QUIZ_DURATION_SECONDS = 5 * 60;
+const QUIZ_DONE_HOLD_MS = 1700;
+
+function QuizSuccessTick() {
+  return (
+    <div className="quiz-success-tick" aria-hidden>
+      <svg viewBox="0 0 52 52" width="76" height="76" focusable="false">
+        <circle cx="26" cy="26" r="24" fill="#dde466" />
+        <path
+          d="M14.5 27.2 22.2 34.5 37.5 18.5"
+          fill="none"
+          stroke="#142644"
+          strokeWidth="3.25"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
 
 function formatQuizTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -66,7 +87,7 @@ function OptionCheck({ checked }: { checked: boolean }) {
 
 const choiceCardClass = (checked: boolean) =>
   cn(
-    "quiz-option-card adviser-option-card adviser-choice-card text-brand-body flex min-h-12 min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition active:scale-[0.99]",
+    "quiz-option-card adviser-option-card adviser-choice-card font-sans flex min-h-10 min-w-0 items-center gap-3 rounded-xl border px-3.5 text-left text-sm",
     checked
       ? "is-selected"
       : "border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] text-[color:var(--dash-muted)] hols-option-hover",
@@ -81,101 +102,6 @@ type LessonQuizOverlayProps = {
   onClose: () => void;
   onSubmitted: (result: LessonQuizResult) => void;
 };
-
-function QuestionStageList({
-  variants,
-  currentIndex,
-  maxVisited,
-  answers,
-  orientation = "vertical",
-  onSelect,
-}: {
-  variants: LessonVariant[];
-  currentIndex: number;
-  maxVisited: number;
-  answers: Record<string, unknown>;
-  orientation?: "vertical" | "wrap";
-  onSelect?: (index: number) => void;
-}) {
-  const renderItem = (variant: LessonVariant, index: number) => {
-    const active = index === currentIndex;
-    const done = isVariantAnswered(variant, answers[variant.id]);
-    const canJump = Boolean(onSelect) && index <= maxVisited;
-    const label = orientation === "wrap" ? `Q${index + 1}` : variantQuestion(variant);
-
-    const content = (
-      <>
-        <span
-          className={cn(
-            orientation === "vertical"
-              ? "text-brand-caption flex h-5 w-5 shrink-0 items-center justify-center rounded-md font-semibold"
-              : "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold leading-none",
-            active && "bg-[color:var(--dash-navy)] text-white",
-            !active &&
-              done &&
-              (orientation === "vertical"
-                ? "border border-[color:var(--dash-surface-border)] text-[color:var(--dash-text)]"
-                : "bg-[color:var(--dash-soft)] text-[color:var(--dash-text)]"),
-            !active &&
-              !done &&
-              (orientation === "vertical"
-                ? "bg-[color:var(--dash-soft)] text-[color:var(--dash-faint)]"
-                : "bg-[color:var(--dash-surface)] text-[color:var(--dash-faint)]"),
-          )}
-        >
-          {done && !active ? (
-            <SidebarSvgIcon name="check" size={orientation === "vertical" ? 12 : 10} strokeWidth={2.7} />
-          ) : (
-            index + 1
-          )}
-        </span>
-        {orientation === "vertical" ? (
-          <span className="min-w-0 truncate leading-tight">{label}</span>
-        ) : null}
-      </>
-    );
-
-    const className = cn(
-      "font-sans inline-flex items-center gap-1.5 rounded-lg text-left transition",
-      orientation === "vertical" && "flex w-full gap-2 px-2 py-1.5 text-sm",
-      orientation === "wrap" && "min-h-11 w-full justify-center px-1 text-xs",
-      active && "bg-[color:var(--dash-soft)] font-semibold text-[color:var(--dash-text)] ring-1 ring-[color:var(--dash-surface-border)]",
-      !active && done && "bg-[color:var(--dash-soft)] text-[color:var(--dash-muted)]",
-      !active && !done && "bg-[color:var(--dash-soft)] text-[color:var(--dash-faint)]",
-      canJump && "cursor-pointer hover:bg-[color:var(--dash-soft)]",
-      !canJump && orientation === "vertical" && !active && !done && "opacity-70",
-    );
-
-    if (canJump) {
-      return (
-        <li key={variant.id} title={variantQuestion(variant)}>
-          <button type="button" onClick={() => onSelect?.(index)} className={className}>
-            {content}
-          </button>
-        </li>
-      );
-    }
-
-    return (
-      <li key={variant.id} title={variantQuestion(variant)} className={className}>
-        {content}
-      </li>
-    );
-  };
-
-  if (orientation === "wrap") {
-    return (
-      <ol
-        className="grid gap-1.5"
-        style={{ gridTemplateColumns: `repeat(${Math.min(variants.length, 5)}, minmax(0, 1fr))` }}
-      >
-        {variants.map((variant, index) => renderItem(variant, index))}
-      </ol>
-    );
-  }
-
-  return <ol className="space-y-1">{variants.map((variant, index) => renderItem(variant, index))}</ol>;
-}
 
 function QuizQuestion({
   variant,
@@ -198,7 +124,7 @@ function QuizQuestion({
   if (options) {
     return (
       <fieldset className="min-w-0 space-y-2.5">
-        <legend className="dashboard-field-label">Choose one answer</legend>
+        <legend className="sr-only">Choose one answer</legend>
         <div className={cn("grid min-w-0 gap-2", options.length <= 3 ? "grid-cols-1" : "grid-cols-1")}>
           {options.map((option) => {
             const checked = value === option;
@@ -212,14 +138,7 @@ function QuizQuestion({
                 className={choiceCardClass(checked)}
               >
                 <OptionCheck checked={checked} />
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 break-words leading-snug",
-                    checked && "font-semibold text-[color:var(--dash-text)]",
-                  )}
-                >
-                  {option}
-                </span>
+                <span className="min-w-0 flex-1 break-words leading-5">{option}</span>
               </button>
             );
           })}
@@ -232,29 +151,27 @@ function QuizQuestion({
     const current = typeof value === "object" && value ? (value as Record<string, string>) : {};
     return (
       <div className="min-w-0 space-y-3">
-        <p className="dashboard-field-label">Match each item</p>
-        {matchingLeft.map((left) => (
-          <label key={left} className="grid min-w-0 gap-1.5">
-            <span className="text-brand-body min-w-0 break-words text-[color:var(--dash-muted)]">{left}</span>
-            <select
+        {matchingLeft.map((left, index) => (
+          <div key={left} className="grid min-w-0 gap-1.5">
+            <p className="min-w-0 break-words font-sans text-sm leading-5 text-[color:var(--dash-muted)]">{left}</p>
+            <ProfileSelect
+              id={`quiz-match-${index}`}
+              label={left}
+              hideLabel
               value={current[left] ?? ""}
               disabled={disabled}
-              onChange={(event) =>
+              placeholder="Select match"
+              portalToBody
+              menuZIndex={200}
+              options={matchingOptions.map((option) => ({ value: option, label: option }))}
+              onChange={(next) =>
                 onChange({
                   ...current,
-                  [left]: event.target.value,
+                  [left]: next,
                 })
               }
-              className="dashboard-field dashboard-field-select min-h-11 w-full min-w-0"
-            >
-              <option value="">Select match</option>
-              {matchingOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
         ))}
       </div>
     );
@@ -269,7 +186,7 @@ function QuizQuestion({
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Type your answer…"
-        className={cn("dashboard-field min-h-11", disabled && "cursor-not-allowed opacity-70")}
+        className={cn("dashboard-field h-10 min-h-10 text-sm", disabled && "cursor-not-allowed opacity-70")}
       />
     </label>
   );
@@ -279,7 +196,6 @@ export function LessonQuizOverlay({
   open,
   courseId,
   lessonId,
-  lessonTitle,
   variants,
   onClose,
   onSubmitted,
@@ -287,7 +203,8 @@ export function LessonQuizOverlay({
   const quizTitleId = useId();
   const leaveTitleId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [phase, setPhase] = useState<"confirm" | "countdown" | "quiz">("confirm");
+  const finishSentRef = useRef(false);
+  const [phase, setPhase] = useState<"confirm" | "countdown" | "quiz" | "done">("confirm");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [maxVisited, setMaxVisited] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(PRESTART_SECONDS);
@@ -297,6 +214,7 @@ export function LessonQuizOverlay({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [completedResult, setCompletedResult] = useState<LessonQuizResult | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const total = variants.length;
@@ -312,21 +230,7 @@ export function LessonQuizOverlay({
   const lastQuestion = questionIndex >= total - 1;
   const busy = submitting;
   const inQuiz = phase === "quiz";
-
-  const progressPercent = useMemo(() => {
-    if (timedOut) return 100;
-    if (phase === "confirm" || phase === "countdown" || total === 0) return 0;
-    return Math.min(100, Math.round(((questionIndex + 1) / total) * 100));
-  }, [phase, questionIndex, timedOut, total]);
-
-  const stageLabel =
-    phase === "confirm"
-      ? "Ready to start"
-      : phase === "countdown"
-        ? "Get ready"
-        : timedOut
-          ? "Time up"
-          : `Question ${Math.min(questionIndex + 1, Math.max(total, 1))} of ${total}`;
+  const quizDone = phase === "done";
 
   useEffect(() => {
     setMounted(true);
@@ -344,7 +248,26 @@ export function LessonQuizOverlay({
     setSubmitting(false);
     setError(null);
     setLeaveConfirmOpen(false);
+    setCompletedResult(null);
+    finishSentRef.current = false;
   }, [lessonId, open]);
+
+  function finishQuiz(result: LessonQuizResult | null = completedResult) {
+    if (finishSentRef.current) return;
+    finishSentRef.current = true;
+    if (result) onSubmitted(result);
+    onClose();
+  }
+
+  useEffect(() => {
+    if (!open || phase !== "done" || !completedResult) return;
+    const timer = window.setTimeout(() => {
+      finishQuiz(completedResult);
+    }, QUIZ_DONE_HOLD_MS);
+    return () => window.clearTimeout(timer);
+    // finishQuiz reads latest refs/state; intentionally omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedResult, open, phase]);
 
   useEffect(() => {
     if (!open) return;
@@ -392,6 +315,11 @@ export function LessonQuizOverlay({
   }, [leaveConfirmOpen, open, phase, quizSecondsLeft, timedOut]);
 
   function requestLeave() {
+    if (phase === "done") {
+      if (completedResult) finishQuiz(completedResult);
+      else onClose();
+      return;
+    }
     if (phase === "confirm" || timedOut) {
       onClose();
       return;
@@ -442,6 +370,11 @@ export function LessonQuizOverlay({
         setLeaveConfirmOpen(false);
         return;
       }
+      if (phase === "done") {
+        if (completedResult) finishQuiz(completedResult);
+        else onClose();
+        return;
+      }
       if (phase === "confirm" || timedOut) {
         onClose();
         return;
@@ -451,10 +384,10 @@ export function LessonQuizOverlay({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [leaveConfirmOpen, onClose, open, phase, timedOut]);
+  }, [completedResult, leaveConfirmOpen, onClose, open, phase, timedOut]);
 
   async function handleSubmit() {
-    if (timedOut || !allAnswered) return;
+    if (timedOut || !allAnswered || phase === "done") return;
 
     setSubmitting(true);
     setError(null);
@@ -465,8 +398,12 @@ export function LessonQuizOverlay({
           answer: answers[variant.id],
         })),
       });
+      // Persist result immediately so the lesson page is not blank if the
+      // success dialog fails to paint or auto-closes early.
       onSubmitted(payload);
-      onClose();
+      setCompletedResult(payload);
+      setPhase("done");
+      setLeaveConfirmOpen(false);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Failed to submit quiz.");
     } finally {
@@ -477,26 +414,31 @@ export function LessonQuizOverlay({
   if (!open || !mounted) return null;
 
   const countdownLabel = secondsLeft > 0 ? String(secondsLeft) : "Go!";
-  const canJumpQuestions = inQuiz && !timedOut && !busy;
   const heading =
     phase === "confirm"
       ? "Do you want to continue?"
       : phase === "countdown"
         ? "Get ready"
-        : timedOut
-          ? "Time is up"
-          : `Question ${Math.min(questionIndex + 1, Math.max(total, 1))} of ${total}`;
+        : phase === "done"
+          ? completedResult?.passed
+            ? "Quiz complete"
+            : "Quiz submitted"
+          : timedOut
+            ? "Time is up"
+            : `Question ${Math.min(questionIndex + 1, Math.max(total, 1))} of ${total}`;
   const description =
     phase === "confirm"
-      ? `${total} question${total === 1 ? "" : "s"} · 5 minutes after the countdown.`
-      : phase === "countdown"
-        ? "The quiz starts after this short countdown."
+      ? `${total} question${total === 1 ? "" : "s"} · 5 minutes`
+      : phase === "countdown" || phase === "done"
+        ? ""
         : timedOut
-          ? "This attempt is closed. You can start again from the lesson."
+          ? "This attempt is closed."
           : `${formatQuizTime(quizSecondsLeft)} remaining`;
 
   const footerButtonClass =
-    "font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium sm:min-h-10 sm:w-auto";
+    "lecture-page-action font-sans inline-flex h-10 min-h-10 w-full max-w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium min-[420px]:w-auto";
+  const primaryButtonClass =
+    "lecture-page-action h-10 min-h-10 w-full max-w-full overflow-hidden px-5 text-sm min-[420px]:w-auto";
 
   return createPortal(
     <div className="adviser-dialog-overlay adviser-dialog-overlay--center fixed inset-0 z-[130] flex min-h-dvh items-center justify-center bg-black/45 px-[max(0.75rem,env(safe-area-inset-left))] py-[max(1rem,env(safe-area-inset-top),env(safe-area-inset-bottom))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-4 sm:py-6">
@@ -505,7 +447,7 @@ export function LessonQuizOverlay({
         aria-label="Close quiz"
         className="absolute inset-0 cursor-default"
         onClick={() => {
-          if (!busy) requestLeave();
+          if (quizDone || !busy) requestLeave();
         }}
       />
 
@@ -513,229 +455,177 @@ export function LessonQuizOverlay({
         role="dialog"
         aria-modal="true"
         aria-labelledby={quizTitleId}
-        className="adviser-dialog-panel adviser-dialog-panel--center relative z-10 flex max-h-[min(88svh,40rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-2xl sm:max-w-xl lg:max-h-[min(88svh,48rem)] lg:max-w-2xl"
+        className={cn(
+          "quiz-dialog-panel adviser-dialog-panel adviser-dialog-panel--center relative z-10 flex w-full min-w-0 flex-col overflow-hidden rounded-2xl",
+          phase === "confirm" || phase === "countdown" || quizDone
+            ? "max-w-md"
+            : "max-h-[min(88svh,40rem)] max-w-lg sm:max-w-xl lg:max-h-[min(88svh,48rem)] lg:max-w-2xl",
+        )}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[color:var(--dash-surface-border)] px-4 py-3.5 sm:gap-4 sm:px-5 sm:py-4 md:px-6">
-          <div className="min-w-0 flex-1">
-            <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
-              Lesson quiz
-            </p>
+        {quizDone ? (
+          <div className="quiz-done-panel flex min-h-[16rem] flex-col items-center justify-center px-5 py-10 text-center sm:min-h-[18rem] sm:px-6 sm:py-12">
+            <QuizSuccessTick />
             <h2
               id={quizTitleId}
-              className="font-sans mt-1 text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl"
+              className="font-sans mt-5 text-xl font-bold tracking-[0.01em] text-[#142644]"
+              style={{ color: "#142644" }}
             >
-              {heading}
+              {completedResult?.passed ? "Quiz complete" : "Quiz submitted"}
             </h2>
-            <p className="text-brand-body mt-1 text-sm text-[color:var(--dash-muted)] sm:text-base">
-              {description}
+            <p
+              className="mt-1.5 font-sans text-sm"
+              style={{ color: "rgba(21, 39, 68, 0.72)" }}
+            >
+              {completedResult
+                ? `${completedResult.correct_count}/${completedResult.total_questions} correct · ${completedResult.score_percent}%`
+                : "Your answers were saved."}
             </p>
-            {phase === "confirm" && lessonTitle ? (
-              <p
-                title={lessonTitle}
-                className="text-brand-caption mt-1 line-clamp-2 break-words text-[color:var(--dash-faint)]"
-              >
-                {lessonTitle}
-              </p>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={requestLeave}
-            className="adviser-onboarding-close inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:h-12 sm:w-12"
-            aria-label={phase === "confirm" || timedOut ? "Close quiz" : "Leave quiz"}
-          >
-            <SidebarSvgIcon name="cross" size={24} strokeWidth={2.2} className="sm:hidden" />
-            <SidebarSvgIcon name="cross" size={28} strokeWidth={2.15} className="hidden sm:block" />
-          </button>
-        </div>
-
-        {inQuiz && !timedOut ? (
-          <div className="hidden shrink-0 px-4 pt-3 sm:block sm:px-5 md:px-6">
-            <div className="mb-1.5 flex items-center justify-between gap-3 text-brand-caption text-[color:var(--dash-muted)]">
-              <span className="min-w-0 truncate">{stageLabel}</span>
-              <span className="shrink-0 font-semibold text-[color:var(--dash-text)]">
-                {progressPercent}%
-              </span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--dash-soft)]">
-              <div
-                className="h-full rounded-full bg-[color:var(--dash-navy)] transition-[width] duration-300"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
-        ) : null}
-
-        <div
-          ref={scrollRef}
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5 md:px-6"
-        >
-          {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
-
-          {phase === "confirm" ? (
-            <div className="space-y-3 rounded-xl border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] p-4">
-              <p className="text-brand-body leading-relaxed text-[color:var(--dash-muted)]">
-                You will confirm, wait for a short countdown, then answer one question at a time.
-                Leaving before you submit will discard this attempt.
-              </p>
-            </div>
-          ) : null}
-
-          {phase === "countdown" ? (
-            <div className="flex flex-col items-center justify-center px-2 py-6 text-center sm:py-8">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-[color:var(--dash-soft)]">
-                <SidebarSvgIcon
-                  name={secondsLeft > 0 ? "clock" : "focus"}
-                  size={18}
-                  strokeWidth={2}
-                />
-              </div>
-              <p
-                className="font-sans text-6xl font-bold tabular-nums leading-none tracking-tight text-[color:var(--dash-text)] sm:text-7xl"
-                aria-live="polite"
-              >
-                {countdownLabel}
-              </p>
-              <p className="text-brand-body mt-4 text-[color:var(--dash-faint)]">
-                Focus up — your lesson quiz is about to begin.
-              </p>
-            </div>
-          ) : null}
-
-          {phase === "quiz" && timedOut ? (
-            <AuthAlert variant="error">
-              Time is up. You can no longer submit this quiz attempt. Go back to the lesson and try
-              again.
-            </AuthAlert>
-          ) : null}
-
-          {phase === "quiz" && !timedOut && currentVariant ? (
-            <div key={currentVariant.id} className="space-y-4">
-              {total > 1 ? (
-                <QuestionStageList
-                  variants={variants}
-                  currentIndex={questionIndex}
-                  maxVisited={maxVisited}
-                  answers={answers}
-                  orientation="wrap"
-                  onSelect={canJumpQuestions ? goToQuestion : undefined}
-                />
-              ) : null}
-
-              <div>
-                <p className="dashboard-field-label">
-                  {currentVariant.variant_type.replaceAll("_", " ")}
-                  {currentAnswered ? " · Ready" : ""}
-                </p>
-                <h3 className="font-sans mt-1 break-words text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg">
-                  {variantQuestion(currentVariant)}
-                </h3>
-              </div>
-
-              <QuizQuestion
-                variant={currentVariant}
-                disabled={busy}
-                value={answers[currentVariant.id]}
-                onChange={(value) =>
-                  setAnswers((current) => ({
-                    ...current,
-                    [currentVariant.id]: value,
-                  }))
-                }
-              />
-
-              {!currentAnswered ? (
-                <p className="text-brand-caption text-[color:var(--dash-faint)]">
-                  Complete this question before continuing
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[color:var(--dash-surface-border)] px-4 py-3.5 sm:flex-row sm:justify-end sm:gap-2.5 sm:px-5 sm:py-4 md:px-6">
-          {phase === "confirm" ? (
-            <>
-              <button
-                type="button"
-                onClick={onClose}
-                className={cn("dashboard-pill-soft text-[color:var(--dash-text)]", footerButtonClass)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={startCountdown}
-                className={cn("dashboard-navy-btn font-semibold text-white", footerButtonClass)}
-              >
-                Continue
-                <SidebarSvgIcon name="next" size={14} strokeWidth={2.2} />
-              </button>
-            </>
-          ) : null}
-
-          {phase === "countdown" || timedOut ? (
             <button
               type="button"
-              onClick={timedOut ? onClose : requestLeave}
+              onClick={() => finishQuiz(completedResult)}
               className={cn(
-                timedOut
-                  ? "dashboard-navy-btn font-semibold text-white"
-                  : "dashboard-pill-soft text-[color:var(--dash-text)]",
+                "dashboard-navy-btn font-semibold text-white mt-6",
                 footerButtonClass,
               )}
             >
-              <SidebarSvgIcon name="previous" size={14} strokeWidth={2.2} />
               Back to lesson
             </button>
-          ) : null}
+          </div>
+        ) : (
+          <div className="flex shrink-0 items-start justify-between gap-3 px-4 py-3.5 sm:gap-4 sm:px-5 sm:py-4">
+            <div className="min-w-0 flex-1">
+              <h2
+                id={quizTitleId}
+                className="font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl"
+              >
+                {heading}
+              </h2>
+              {description ? (
+                <p className="mt-1 font-sans text-sm text-[color:var(--dash-muted)]">{description}</p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={requestLeave}
+              className="adviser-onboarding-close inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50"
+              aria-label={phase === "confirm" || timedOut ? "Close quiz" : "Leave quiz"}
+            >
+              <SidebarSvgIcon name="cross" size={24} strokeWidth={2.25} />
+            </button>
+          </div>
+        )}
 
-          {inQuiz && !timedOut ? (
-            <>
-              {questionIndex > 0 ? (
+        {phase !== "confirm" && !quizDone ? (
+          <div
+            ref={scrollRef}
+            className={cn(
+              "min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5",
+              phase === "countdown" ? "py-3 sm:py-4" : "flex-1 space-y-3 py-3 sm:py-4",
+            )}
+          >
+            {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
+
+            {phase === "countdown" ? (
+              <div className="flex flex-col items-center justify-center px-2 py-2 text-center sm:py-3">
+                <p
+                  className="font-sans text-5xl font-bold tabular-nums leading-none tracking-tight text-[color:var(--dash-text)] sm:text-6xl"
+                  aria-live="polite"
+                >
+                  {countdownLabel}
+                </p>
+              </div>
+            ) : null}
+
+            {phase === "quiz" && timedOut ? (
+              <AuthAlert variant="error">
+                Time is up. You can no longer submit this quiz attempt. Go back to the lesson and try
+                again.
+              </AuthAlert>
+            ) : null}
+
+            {phase === "quiz" && !timedOut && currentVariant ? (
+              <div key={currentVariant.id} className="space-y-3">
+                <h3 className="font-sans break-words text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg">
+                  {variantQuestion(currentVariant)}
+                </h3>
+
+                <QuizQuestion
+                  variant={currentVariant}
+                  disabled={busy}
+                  value={answers[currentVariant.id]}
+                  onChange={(value) =>
+                    setAnswers((current) => ({
+                      ...current,
+                      [currentVariant.id]: value,
+                    }))
+                  }
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : error ? (
+          <div className="px-4 pb-2 sm:px-5">
+            <AuthAlert variant="error">{error}</AuthAlert>
+          </div>
+        ) : null}
+
+        {!quizDone ? (
+          <div className="flex shrink-0 flex-col-reverse gap-2 px-4 py-3.5 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:justify-end min-[420px]:gap-2.5 sm:px-5 sm:py-4">
+            {phase === "confirm" ? (
+              <>
                 <button
                   type="button"
-                  onClick={handleBack}
-                  disabled={busy}
-                  className={cn(
-                    "dashboard-pill-soft text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50",
-                    footerButtonClass,
-                  )}
+                  onClick={onClose}
+                  className={cn("dashboard-navy-btn font-semibold text-white", footerButtonClass)}
                 >
-                  <SidebarSvgIcon name="previous" size={14} strokeWidth={2.2} />
-                  Back
+                  Cancel
                 </button>
-              ) : null}
+                <Button type="button" size="sm" onClick={startCountdown} className={primaryButtonClass}>
+                  Continue
+                </Button>
+              </>
+            ) : null}
+
+            {phase === "countdown" || timedOut ? (
               <button
                 type="button"
-                onClick={handleNext}
-                disabled={!currentAnswered || busy || (lastQuestion && !allAnswered)}
-                className={cn(
-                  "dashboard-navy-btn font-semibold text-white disabled:pointer-events-none disabled:opacity-45",
-                  footerButtonClass,
-                )}
+                onClick={timedOut ? onClose : requestLeave}
+                className={cn("dashboard-navy-btn font-semibold text-white", footerButtonClass)}
               >
-                {submitting ? (
-                  <>
-                    <SidebarSvgIcon name="spinner" size={16} className="animate-spin" />
-                    Submitting…
-                  </>
-                ) : lastQuestion ? (
-                  <>
-                    <SidebarSvgIcon name="check" size={14} strokeWidth={2.2} />
-                    Submit quiz
-                  </>
-                ) : (
-                  <>
-                    Continue
-                    <SidebarSvgIcon name="next" size={14} strokeWidth={2.2} />
-                  </>
-                )}
+                Back to lesson
               </button>
-            </>
-          ) : null}
-        </div>
+            ) : null}
+
+            {inQuiz && !timedOut ? (
+              <>
+                {questionIndex > 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    disabled={busy}
+                    className={cn(
+                      "dashboard-navy-btn font-semibold text-white disabled:pointer-events-none disabled:opacity-50",
+                      footerButtonClass,
+                    )}
+                  >
+                    Back
+                  </button>
+                ) : null}
+                <Button
+                  key={`quiz-continue-${questionIndex}`}
+                  type="button"
+                  size="sm"
+                  disabled={!currentAnswered || busy || (lastQuestion && !allAnswered)}
+                  onClick={handleNext}
+                  className={primaryButtonClass}
+                >
+                  {submitting ? "Submitting…" : lastQuestion ? "Submit quiz" : "Continue"}
+                </Button>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {leaveConfirmOpen ? (
@@ -750,50 +640,46 @@ export function LessonQuizOverlay({
             role="alertdialog"
             aria-modal="true"
             aria-labelledby={leaveTitleId}
-            className="adviser-dialog-panel adviser-dialog-panel--center relative z-10 flex max-h-[min(88svh,28rem)] w-full max-w-md min-w-0 flex-col overflow-hidden rounded-2xl"
+            className="quiz-dialog-panel adviser-dialog-panel adviser-dialog-panel--center relative z-10 flex w-full max-w-md min-w-0 flex-col overflow-hidden rounded-2xl"
           >
-            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[color:var(--dash-surface-border)] px-4 py-3.5 sm:gap-4 sm:px-5 sm:py-4 md:px-6">
+            <div className="flex shrink-0 items-start justify-between gap-3 px-4 py-3.5 sm:gap-4 sm:px-5 sm:py-4 md:px-6">
               <div className="min-w-0">
-                <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
-                  Leave quiz
-                </p>
                 <h2
                   id={leaveTitleId}
-                  className="font-sans mt-1 text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl"
+                  className="font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl"
                 >
                   Do you want to cancel this quiz?
                 </h2>
-                <p className="text-brand-body mt-1 text-sm text-[color:var(--dash-muted)] sm:text-base">
-                  Your progress will not be saved. You can start the quiz again later from the lesson
-                  page.
+                <p className="mt-1 font-sans text-sm text-[color:var(--dash-muted)]">
+                  Your progress will not be saved.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setLeaveConfirmOpen(false)}
-                className="adviser-onboarding-close inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition sm:h-12 sm:w-12"
+                className="adviser-onboarding-close inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition"
                 aria-label="Keep taking quiz"
               >
-                <SidebarSvgIcon name="cross" size={24} strokeWidth={2.2} className="sm:hidden" />
-                <SidebarSvgIcon name="cross" size={28} strokeWidth={2.15} className="hidden sm:block" />
+                <SidebarSvgIcon name="cross" size={24} strokeWidth={2.25} />
               </button>
             </div>
 
-            <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[color:var(--dash-surface-border)] px-4 py-3.5 sm:flex-row sm:justify-end sm:gap-2.5 sm:px-5 sm:py-4 md:px-6">
+            <div className="flex shrink-0 flex-col-reverse gap-2 px-4 py-3.5 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:justify-end min-[420px]:gap-2.5 sm:px-5 sm:py-4">
               <button
                 type="button"
                 onClick={confirmLeave}
-                className={cn("dashboard-pill-soft text-[color:var(--dash-text)]", footerButtonClass)}
+                className={cn("dashboard-navy-btn font-semibold text-white", footerButtonClass)}
               >
                 Yes, cancel quiz
               </button>
-              <button
+              <Button
                 type="button"
+                size="sm"
                 onClick={() => setLeaveConfirmOpen(false)}
-                className={cn("dashboard-navy-btn font-semibold text-white", footerButtonClass)}
+                className={primaryButtonClass}
               >
                 Keep taking quiz
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -855,17 +741,17 @@ export function LessonQuizResultCard({ result, courseId, onRetake }: LessonQuizR
         ))}
       </div>
 
-      <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap">
+      <div className="@container mt-4 flex min-w-0 flex-col-reverse gap-2 @min-[24rem]:flex-row @min-[24rem]:flex-wrap">
         <Link
           href={`/student/lectures/${courseId}/test-result`}
-          className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] sm:min-h-10 sm:w-auto"
+          className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-1.5 rounded-full px-5 text-center text-sm font-medium text-[color:var(--dash-text)] @min-[24rem]:min-h-10 @min-[24rem]:w-auto"
         >
           View all test results
         </Link>
         <button
           type="button"
           onClick={onRetake}
-          className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10 sm:w-auto"
+          className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white @min-[24rem]:min-h-10 @min-[24rem]:w-auto"
         >
           <SidebarSvgIcon name="quiz" size={15} />
           Take quiz again

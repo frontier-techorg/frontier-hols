@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/integrate/client";
+import { apiRequest, getApiBaseUrl } from "@/lib/integrate/client";
 import type {
   CourseBundleData,
   CourseDetailData,
@@ -16,8 +16,7 @@ import type {
   TopicListData,
 } from "@/lib/integrate/provider/student/lectures/types";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+const API_BASE_URL = getApiBaseUrl();
 /** Bump when lecture payload shape changes so stale session caches are ignored. */
 const LECTURE_CACHE_VERSION = "v3";
 

@@ -1,6 +1,6 @@
 import type { SidebarIconName } from "@/components/platform/provider/sidebar-icons";
 
-export type AdminSettingsSection = "profile" | "payout";
+export type AdminSettingsSection = "profile" | "plan" | "payout";
 
 export type AdminSettingsNavItem = {
   id: AdminSettingsSection;
@@ -19,6 +19,13 @@ export const ADMIN_SETTINGS_NAV: readonly AdminSettingsNavItem[] = [
     shortLabel: "Profile",
     icon: "profile",
     exact: true,
+  },
+  {
+    id: "plan",
+    href: "/admin/profile/plans",
+    label: "Plan",
+    shortLabel: "Plan",
+    icon: "plans",
   },
   {
     id: "payout",

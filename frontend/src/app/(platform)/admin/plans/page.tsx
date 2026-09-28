@@ -1,10 +1,6 @@
-import { PortalGate } from "@/components/platform/provider/PortalGate";
-import { AdminPlansPage } from "@/components/platform/provider/admin/payment/AdminPlansPage";
+import { redirect } from "next/navigation";
 
+/** Plans now live in admin settings. */
 export default function AdminPlansRoute() {
-  return (
-    <PortalGate role="admin">
-      <AdminPlansPage />
-    </PortalGate>
-  );
+  redirect("/admin/profile/plans");
 }

@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
+import { PaginationControls } from "@/components/platform/provider/admin/shared";
+import { Button } from "@/components/ui/Button";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import {
   TestResultRowsSkeleton,
   TestResultsPageSkeleton,
 } from "@/components/platform/provider/student/DashboardSkeletons";
-import {
-  CoursePageLayout,
-  useOpenCourseCalculator,
-} from "@/components/platform/provider/student/lectures/CoursePageLayout";
+import { CoursePageLayout } from "@/components/platform/provider/student/lectures/CoursePageLayout";
 import { LectureMembershipLockedScreen } from "@/components/platform/provider/student/lectures/LectureMembershipLock";
-import { LecturesPageLayout } from "@/components/platform/provider/student/lectures/LecturesPageLayout";
 import { ApiRequestError } from "@/lib/integrate/client";
 import {
   getCourse,
@@ -26,7 +25,7 @@ import {
   isMembershipRequiredError,
   useStudentMembershipAccess,
 } from "@/lib/integrate/provider/student/payment/membershipAccess";
-import { cn } from "@/lib/utils";
+import { scrollAppToTopSoon } from "@/lib/scroll-to-top";
 
 type StudentTestResultPageProps = {
   courseId: string;
@@ -46,6 +45,7 @@ function formatWhen(value?: string) {
 }
 
 export function StudentTestResultPage({ courseId }: StudentTestResultPageProps) {
+  const router = useRouter();
   const membershipAccess = useStudentMembershipAccess();
   const [course, setCourse] = useState<CourseSummary | null>(null);
   const [results, setResults] = useState<CourseTestResultsData | null>(null);
@@ -118,9 +118,17 @@ export function StudentTestResultPage({ courseId }: StudentTestResultPageProps) 
 
   if (!membershipAccess.ready) {
     return (
-      <LecturesPageLayout>
+      <CoursePageLayout
+        title="Test result"
+        description=""
+        courseId={courseId}
+        courseNavActive="test-result"
+        backHref={`/student/lectures/${courseId}`}
+        backLabel="Back to cover"
+        hideHero
+      >
         <TestResultsPageSkeleton />
-      </LecturesPageLayout>
+      </CoursePageLayout>
     );
   }
 
@@ -143,286 +151,256 @@ export function StudentTestResultPage({ courseId }: StudentTestResultPageProps) 
       {loading ? (
         <TestResultsPageSkeleton />
       ) : (
-        <div className="grid w-full min-w-0 max-w-full items-stretch gap-3 sm:gap-4 lg:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
-            <section className="dashboard-glass-card min-w-0 overflow-hidden rounded-2xl p-4 sm:p-5 md:p-6">
-              <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
-                Quiz progress
-              </p>
-              {course?.title ? (
-                <h2
-                  title={course.title}
-                  className="font-sans mt-2 text-left text-xl font-bold leading-snug tracking-[0.01em] text-[color:var(--dash-text)] sm:text-2xl"
-                >
-                  {course.title}
-                </h2>
-              ) : null}
-
-              <div className="mt-3 flex flex-wrap items-end gap-2">
-                <span className="font-sans text-3xl font-bold tracking-[0.01em] text-[color:var(--dash-text)] md:text-[2.25rem] md:leading-none">
-                  {averageScore}%
-                </span>
-                <span className="mb-1 text-brand-caption font-medium text-[color:var(--dash-faint)]">
-                  average score
-                </span>
-              </div>
-
-              <div className="mt-4">
+        <div className="test-result-page @container grid w-full min-w-0 max-w-full gap-3 sm:gap-4">
+          <section className="dashboard-glass-card min-w-0 overflow-hidden rounded-2xl p-4 sm:p-5">
+            <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
+              Quiz progress
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <span className="font-sans text-3xl font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)]">
+                {averageScore}%
+              </span>
+              <span className="mb-0.5 text-brand-caption font-medium text-[color:var(--dash-muted)]">
+                average score
+              </span>
+            </div>
+            <div className="mt-4">
+              <div
+                className="test-result-track h-2 overflow-hidden rounded-full"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={progress}
+                aria-label={`${progress}% of lessons quizzed`}
+              >
                 <div
-                  className="h-2 overflow-hidden rounded-full bg-[color:var(--dash-soft)]"
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={progress}
-                  aria-label={`${progress}% of lessons quizzed`}
-                >
-                  <div
-                    className="h-full rounded-full bg-[color:var(--dash-navy)]"
-                    style={{ width: `${Math.min(100, Math.max(progress ? 4 : 0, progress))}%` }}
-                  />
-                </div>
-                <p className="text-brand-caption mt-2 text-[color:var(--dash-muted)]">
-                  {lessonsQuizzed} of {totalLessons} lessons quizzed
-                  {passedCount ? ` · ${passedCount} passed` : ""}
-                </p>
+                  className="test-result-fill h-full rounded-full"
+                  style={{ width: `${Math.min(100, Math.max(progress ? 4 : 0, progress))}%` }}
+                />
               </div>
+              <p className="text-brand-caption mt-2 text-[color:var(--dash-muted)]">
+                {lessonsQuizzed} of {totalLessons} lessons quizzed · {passedCount} passed
+              </p>
+            </div>
+          </section>
 
-              <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
-                <MetricTile label="Quizzed" value={`${lessonsQuizzed}/${totalLessons}`} />
-                <MetricTile label="Average" value={`${averageScore}%`} />
-                <MetricTile label="Passed" value={String(passedCount)} />
-                <MetricTile label="Lessons" value={String(course?.lesson_count ?? 0)} />
-              </div>
+          <section className="dashboard-glass-card min-w-0 overflow-hidden rounded-2xl">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 px-4 py-4 sm:px-5">
+              <h2 className="font-sans text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)]">
+                Saved attempts
+              </h2>
+              {pagination ? (
+                <span className="text-brand-caption font-medium tabular-nums text-[color:var(--dash-faint)]">
+                  {pagination.total} result{pagination.total === 1 ? "" : "s"}
+                </span>
+              ) : null}
+            </div>
 
-              <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-2.5">
-                <Link
-                  href={`/student/lectures/${courseId}/lessons`}
-                  className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10 sm:w-auto"
-                >
-                  Continue lessons
-                  <SidebarSvgIcon name="next" size={15} />
-                </Link>
-                <OpenCalculatorButton />
-              </div>
-            </section>
-
-            <section className="dashboard-glass-card min-w-0 overflow-hidden rounded-2xl p-4 sm:p-5 md:p-6">
-              <div className="flex min-w-0 flex-wrap items-end justify-between gap-2">
-                <div className="min-w-0">
-                  <h2 className="font-sans text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg">
-                    Saved attempts
-                  </h2>
-                  <p className="text-brand-caption mt-1 text-[color:var(--dash-muted)]">
-                    Open a lesson to review the quiz.
-                  </p>
-                </div>
-                {pagination ? (
-                  <span className="text-brand-caption font-medium tabular-nums text-[color:var(--dash-faint)]">
-                    {pagination.total} result{pagination.total === 1 ? "" : "s"}
-                  </span>
-                ) : null}
-              </div>
-
-              {loadingResults ? (
-                <TestResultRowsSkeleton />
-              ) : results?.items.length ? (
-                <>
-                  <ul className="mt-4 space-y-2.5 md:space-y-1">
-                    {results.items.map((item) => {
-                      const when = formatWhen(item.updated_at);
-                      return (
-                        <li key={item.lesson_id} className="min-w-0">
-                          <Link
-                            href={lessonHref(courseId, item.lesson_id)}
-                            className="hols-option-hover flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-2xl bg-[color:var(--dash-soft)]/80 px-3.5 py-3.5 md:min-h-0 md:rounded-xl md:bg-transparent md:px-3.5 md:py-3"
+            {loadingResults ? (
+              <TestResultRowsSkeleton />
+            ) : results?.items.length ? (
+              <>
+                <ul className="grid gap-2.5 px-3.5 pb-4 sm:gap-3 sm:px-5 md:hidden">
+                  {results.items.map((item) => {
+                    const href = lessonHref(courseId, item.lesson_id);
+                    const when = formatWhen(item.updated_at);
+                    return (
+                      <li key={item.lesson_id} className="min-w-0">
+                        <Link
+                          href={href}
+                          onClick={() => scrollAppToTopSoon()}
+                          className="block min-w-0 overflow-hidden rounded-2xl bg-[color:var(--dash-soft)]/80 px-4 py-4 transition hover:bg-[color:var(--dash-soft)]"
+                        >
+                          <p
+                            title={item.lesson_title}
+                            className="font-sans line-clamp-2 text-sm font-semibold leading-snug text-[color:var(--dash-text)]"
                           >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <span className="dashboard-tool-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold tabular-nums text-[color:var(--dash-text)]">
+                            {item.lesson_title}
+                          </p>
+                          <p className="text-brand-caption mt-1 text-[color:var(--dash-faint)]">
+                            Lesson {item.lesson_order}
+                          </p>
+                          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                            <div className="min-w-0">
+                              <dt className="text-brand-caption text-[color:var(--dash-faint)]">Score</dt>
+                              <dd className="font-sans mt-0.5 text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                {item.score_percent}%
+                              </dd>
+                            </div>
+                            <div className="min-w-0">
+                              <dt className="text-brand-caption text-[color:var(--dash-faint)]">Status</dt>
+                              <dd className="mt-0.5">
+                                <AttemptStatus passed={item.passed} />
+                              </dd>
+                            </div>
+                            <div className="min-w-0">
+                              <dt className="text-brand-caption text-[color:var(--dash-faint)]">Correct</dt>
+                              <dd className="font-sans mt-0.5 text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                {item.correct_count}/{item.total_questions}
+                              </dd>
+                            </div>
+                            <div className="min-w-0">
+                              <dt className="text-brand-caption text-[color:var(--dash-faint)]">Date</dt>
+                              <dd className="font-sans mt-0.5 truncate text-sm font-semibold text-[color:var(--dash-text)]">
+                                {when || "—"}
+                              </dd>
+                            </div>
+                          </dl>
+                          <div className="mt-3 flex justify-end border-t border-[color:var(--dash-surface-border)] pt-3">
+                            <span className="portal-action-link">Open</span>
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                <div className="hidden min-w-0 overflow-x-auto md:block">
+                  <table className="w-full min-w-[40rem] border-separate border-spacing-0 text-left">
+                    <thead>
+                      <tr className="bg-[color:var(--dash-soft)] text-brand-caption font-semibold uppercase tracking-[0.06em] text-[color:var(--dash-faint)]">
+                        <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                          Lesson
+                        </th>
+                        <th scope="col" className="px-3 py-3 font-semibold">
+                          Score
+                        </th>
+                        <th scope="col" className="px-3 py-3 font-semibold">
+                          Correct
+                        </th>
+                        <th scope="col" className="px-3 py-3 font-semibold">
+                          Status
+                        </th>
+                        <th scope="col" className="px-3 py-3 font-semibold">
+                          Date
+                        </th>
+                        <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.items.map((item) => {
+                        const href = lessonHref(courseId, item.lesson_id);
+                        const when = formatWhen(item.updated_at);
+                        return (
+                          <tr
+                            key={item.lesson_id}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Open ${item.lesson_title}`}
+                            className="test-result-row cursor-pointer outline-none transition hover:bg-[color:var(--dash-soft)] focus-visible:bg-[color:var(--dash-soft)]"
+                            onClick={() => {
+                              scrollAppToTopSoon();
+                              router.push(href);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                scrollAppToTopSoon();
+                                router.push(href);
+                              }
+                            }}
+                          >
+                            <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                              <span
+                                title={item.lesson_title}
+                                className="font-sans block max-w-[22rem] truncate text-sm font-semibold text-[color:var(--dash-text)]"
+                              >
+                                {item.lesson_title}
+                              </span>
+                              <span className="text-brand-caption mt-0.5 block text-[color:var(--dash-faint)]">
+                                Lesson {item.lesson_order}
+                              </span>
+                            </td>
+                            <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                              <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
                                 {item.score_percent}%
                               </span>
-                              <div className="min-w-0">
-                                <p
-                                  title={item.lesson_title}
-                                  className="font-sans truncate text-sm font-medium text-[color:var(--dash-text)]"
-                                >
-                                  {item.lesson_title}
-                                </p>
-                                <p className="text-brand-caption mt-0.5 truncate text-[color:var(--dash-faint)]">
-                                  Lesson {item.lesson_order} · {item.correct_count}/{item.total_questions}{" "}
-                                  correct{when ? ` · ${when}` : ""}
-                                </p>
-                              </div>
-                            </div>
-
-                            <span className="flex shrink-0 items-center gap-2">
-                              <span className="dashboard-pill-soft text-brand-caption inline-flex items-center rounded-full px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
-                                {item.passed ? "Passed" : "Review"}
+                            </td>
+                            <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                              <span className="font-sans text-sm tabular-nums text-[color:var(--dash-muted)]">
+                                {item.correct_count}/{item.total_questions}
                               </span>
-                              <SidebarSvgIcon
-                                name="next"
-                                size={18}
-                                className="text-[color:var(--dash-accent)] md:text-[color:var(--dash-dim)]"
-                              />
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-
-                  {pagination && pagination.total_pages > 1 ? (
-                    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-brand-caption text-center text-[color:var(--dash-faint)] sm:text-left">
-                        Page {pagination.page} of {pagination.total_pages}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
-                        <PagerButton
-                          variant="prev"
-                          disabled={!pagination.has_previous || loadingResults}
-                          onClick={() => setPage((current) => Math.max(1, current - 1))}
-                        >
-                          <SidebarSvgIcon name="previous" size={16} />
-                          <span className="sm:hidden">Prev</span>
-                          <span className="hidden sm:inline">Previous</span>
-                        </PagerButton>
-                        <PagerButton
-                          variant="next"
-                          disabled={!pagination.has_next || loadingResults}
-                          onClick={() => setPage((current) => current + 1)}
-                        >
-                          <span className="sm:hidden">Next</span>
-                          <span className="hidden sm:inline">Next</span>
-                          <SidebarSvgIcon name="next" size={16} />
-                        </PagerButton>
-                      </div>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <div className="mt-6 flex flex-col items-center px-2 py-8 text-center sm:py-10">
-                  <span className="dashboard-tool-icon flex h-14 w-14 items-center justify-center rounded-full text-[color:var(--dash-text)]">
-                    <SidebarSvgIcon name="quiz" size={22} strokeWidth={1.85} />
-                  </span>
-                  <p className="font-sans mt-4 text-base font-semibold text-[color:var(--dash-text)] sm:text-lg">
-                    No quiz results yet
-                  </p>
-                  <p className="text-brand-body mt-1.5 max-w-sm text-[color:var(--dash-muted)]">
-                    Complete a lesson quiz and your score will show up here.
-                  </p>
-                  <Link
-                    href={`/student/lectures/${courseId}/lessons`}
-                    className="dashboard-navy-btn font-sans mt-5 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10 sm:w-auto"
-                  >
-                    Start a lesson
-                    <SidebarSvgIcon name="next" size={15} />
-                  </Link>
+                            </td>
+                            <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                              <AttemptStatus passed={item.passed} />
+                            </td>
+                            <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                              <span className="text-brand-caption whitespace-nowrap text-[color:var(--dash-muted)]">
+                                {when || "—"}
+                              </span>
+                            </td>
+                            <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                              <Link
+                                href={href}
+                                className="portal-action-link"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  scrollAppToTopSoon();
+                                }}
+                              >
+                                Open
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </section>
-          </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center px-5 py-12 text-center sm:py-14">
+                <p className="font-sans text-base font-semibold text-[color:var(--dash-text)] sm:text-lg">
+                  No quiz results yet
+                </p>
+                <p className="text-brand-body mt-1.5 max-w-sm text-[color:var(--dash-muted)]">
+                  Complete a lesson quiz and your score will show up here.
+                </p>
+                <Button
+                  href={`/student/lectures/${courseId}/lessons`}
+                  className="lecture-page-action mt-4 w-full px-5 sm:w-auto"
+                >
+                  Start a lesson
+                  <SidebarSvgIcon name="next" size={16} />
+                </Button>
+              </div>
+            )}
 
-          <aside className="dashboard-glass-card h-fit min-w-0 rounded-2xl p-4 sm:p-5 md:p-6 lg:sticky lg:top-4">
-            <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
-              Next steps
-            </p>
-
-            <div className="mt-4 space-y-2.5">
-              <StatRow icon="quiz" label="Lessons quizzed" value={`${lessonsQuizzed} / ${totalLessons}`} />
-              <StatRow icon="clock" label="Average score" value={`${averageScore}%`} />
-              <StatRow icon="check" label="Passed quizzes" value={String(passedCount)} />
-            </div>
-
-            <div className="my-5 h-px bg-[color:var(--dash-surface-border)]" />
-
-            <div className="flex flex-col gap-2">
-              <Link
-                href={`/student/lectures/${courseId}/lessons`}
-                className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10"
-              >
-                Open lessons
-                <SidebarSvgIcon name="next" size={14} />
-              </Link>
-              <Link
-                href={`/student/lectures/${courseId}`}
-                className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)] sm:min-h-10"
-              >
-                Course overview
-              </Link>
-              <OpenCalculatorButton fullWidth />
-            </div>
-          </aside>
+            {pagination && pagination.total > 0 && (pagination.has_next || pagination.has_previous) ? (
+              <div className="px-3.5 pb-4 sm:px-5">
+                <PaginationControls
+                  appearance="lecture"
+                  page={pagination.page}
+                  total={pagination.total}
+                  pageCount={pagination.total_pages}
+                  hasNext={pagination.has_next}
+                  hasPrevious={pagination.has_previous}
+                  loading={loadingResults}
+                  onPrevious={() => {
+                    scrollAppToTopSoon();
+                    setPage((current) => Math.max(1, current - 1));
+                  }}
+                  onNext={() => {
+                    scrollAppToTopSoon();
+                    setPage((current) => current + 1);
+                  }}
+                />
+              </div>
+            ) : null}
+          </section>
         </div>
       )}
     </CoursePageLayout>
   );
 }
 
-function MetricTile({ label, value }: { label: string; value: string }) {
+function AttemptStatus({ passed }: { passed: boolean }) {
   return (
-    <div className="rounded-xl bg-[color:var(--dash-soft)] px-3 py-3 sm:px-3.5">
-      <p className="text-brand-caption text-[color:var(--dash-faint)]">{label}</p>
-      <p className="font-sans mt-1 truncate text-lg font-semibold text-[color:var(--dash-text)]">{value}</p>
-    </div>
+    <span className="text-brand-caption inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
+      {passed ? "Passed" : "Review"}
+    </span>
   );
 }
 
-function StatRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: "quiz" | "clock" | "check";
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] px-3.5 py-3">
-      <span className="dashboard-tool-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)]">
-        <SidebarSvgIcon name={icon} size={15} strokeWidth={1.9} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-brand-caption text-[color:var(--dash-faint)]">{label}</p>
-        <p className="font-sans truncate text-sm font-semibold text-[color:var(--dash-text)]">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function PagerButton({
-  children,
-  disabled,
-  onClick,
-  variant,
-}: {
-  children: React.ReactNode;
-  disabled?: boolean;
-  onClick: () => void;
-  variant: "prev" | "next";
-}) {
-  const className =
-    variant === "next"
-      ? "lesson-next-cta dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-50 disabled:hover:brightness-100 sm:min-h-10 sm:w-auto"
-      : "lesson-prev-cta dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto";
-
-  return (
-    <button type="button" disabled={disabled} onClick={onClick} className={className}>
-      {children}
-    </button>
-  );
-}
-
-function OpenCalculatorButton({ fullWidth = false }: { fullWidth?: boolean }) {
-  const { calculatorHref } = useOpenCourseCalculator();
-  return (
-    <Link
-      href={calculatorHref}
-      className={cn(
-        "dashboard-pill-soft font-sans inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)] sm:min-h-10",
-        fullWidth ? "w-full" : "w-full sm:w-auto",
-      )}
-    >
-      <SidebarSvgIcon name="calculator" size={15} />
-      Open calculator
-    </Link>
-  );
-}

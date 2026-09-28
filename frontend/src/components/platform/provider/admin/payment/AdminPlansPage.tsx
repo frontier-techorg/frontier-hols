@@ -2,13 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
-import { adminNav } from "@/components/platform/provider/admin/adminNav";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import { DashRightDrawer } from "@/components/platform/provider/student/DashRightDrawer";
 import { MembershipHubSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
 import { PLAN_META } from "@/components/platform/provider/student/payment/membershipPlans";
 import { MembershipListPanel } from "@/components/platform/provider/student/payment/MembershipListPanel";
-import { PaymentPageLayout } from "@/components/platform/provider/student/payment/PaymentPageLayout";
 import { ApiRequestError } from "@/lib/integrate/client";
 import {
   getCachedAdminPlans,
@@ -18,6 +16,7 @@ import {
   type PlanType,
 } from "@/lib/integrate/provider/admin/payment/api";
 import { formatDate, formatMoney, planLabels } from "@/lib/integrate/provider/student/payment/types";
+import { Button } from "@/components/ui/Button";
 
 function isValidPriceDraft(value: string) {
   const price = Number(value);
@@ -98,7 +97,7 @@ export function AdminPlansPage() {
   }
 
   return (
-    <PaymentPageLayout title="Plans" role="admin" nav={adminNav}>
+    <div className="plans-page grid w-full min-w-0 gap-3 sm:gap-4">
       {error && !selectedPlan ? <AuthAlert variant="error">{error}</AuthAlert> : null}
       {success && !selectedPlan ? <AuthAlert variant="success">{success}</AuthAlert> : null}
 
@@ -108,13 +107,11 @@ export function AdminPlansPage() {
         <MembershipListPanel
           plans={plans}
           membership={null}
-          card={null}
           activePlanType={selectedPlan}
           onSelect={setSelectedPlan}
           statusTitle="Live membership pricing"
           statusMeta={`${plans.length} plans · shown to students`}
           ctaLabel="Edit price"
-          showCardLink={false}
         />
       )}
 
@@ -140,7 +137,7 @@ export function AdminPlansPage() {
           />
         </DashRightDrawer>
       ) : null}
-    </PaymentPageLayout>
+    </div>
   );
 }
 
@@ -167,7 +164,7 @@ function AdminPlanPricePanel({
   const priceChanged = validPrice && Number(priceDraft) !== Number(plan.price);
 
   return (
-    <div className="grid min-w-0 gap-4">
+    <div className="plans-edit-sheet grid min-w-0 gap-4">
       {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
       {success ? <AuthAlert variant="success">{success}</AuthAlert> : null}
 
@@ -223,15 +220,15 @@ function AdminPlanPricePanel({
         Students see this price immediately after you save.
       </p>
 
-      <button
+      <Button
         type="button"
         disabled={saving || !validPrice || !priceChanged}
         onClick={onSave}
-        className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white disabled:pointer-events-none disabled:opacity-60"
+        className="lecture-page-action w-full px-4"
       >
         <SidebarSvgIcon name="check" size={15} strokeWidth={2.2} />
         {saving ? "Saving…" : priceChanged ? "Save price" : "No changes"}
-      </button>
+      </Button>
     </div>
   );
 }

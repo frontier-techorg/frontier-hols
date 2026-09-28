@@ -1,7 +1,6 @@
 export { StudentPortal } from "@/components/platform/provider/student/StudentPortal";
-export { StudentPaymentPage } from "@/components/platform/provider/student/payment/StudentPaymentPage";
+export { StudentPlansPage, StudentPaymentPage } from "@/components/platform/provider/student/payment/StudentPlansPage";
 export { StudentOrdersPage } from "@/components/platform/provider/student/payment/StudentOrdersPage";
-export { StudentCardPage } from "@/components/platform/provider/student/payment/StudentCardPage";
 export { StudentProfilePage, StudentSettingsPage } from "@/components/platform/provider/student/profile/StudentSettingsPage";
 export {
   StudentLecturesPage,

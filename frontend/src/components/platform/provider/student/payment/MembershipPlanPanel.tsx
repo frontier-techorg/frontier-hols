@@ -1,16 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
+import { Button } from "@/components/ui/Button";
 import { PLAN_META } from "@/components/platform/provider/student/payment/membershipPlans";
-import type { Membership, PaymentCard, Plan } from "@/lib/integrate/provider/student/payment/types";
+import type { Membership, Plan } from "@/lib/integrate/provider/student/payment/types";
 import { formatDate, formatMoney, planLabels } from "@/lib/integrate/provider/student/payment/types";
 
 type MembershipPlanPanelProps = {
   plan: Plan;
   membership: Membership | null;
-  card: PaymentCard | null;
   purchasing?: boolean;
   gatewayBypassed?: boolean;
   error?: string | null;
@@ -21,7 +20,6 @@ type MembershipPlanPanelProps = {
 export function MembershipPlanPanel({
   plan,
   membership,
-  card,
   purchasing = false,
   gatewayBypassed = false,
   error,
@@ -38,12 +36,12 @@ export function MembershipPlanPanel({
       {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
       {success ? <AuthAlert variant="success">{success}</AuthAlert> : null}
 
-      <section className="dashboard-glass-card rounded-2xl p-4 sm:p-5">
+      <section className="membership-checkout-card rounded-2xl p-4 sm:p-5">
         <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
           {switching ? "Switch plan" : "Confirm purchase"}
         </p>
         <div className="mt-3 flex items-center gap-3">
-          <span className="dashboard-tool-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)]">
+          <span className="membership-checkout-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-full">
             <SidebarSvgIcon name={meta.icon} size={18} strokeWidth={1.8} />
           </span>
           <div className="min-w-0">
@@ -60,14 +58,6 @@ export function MembershipPlanPanel({
             label="Term"
             value={plan.duration_days ? `${plan.duration_days} days` : meta.period}
           />
-          <CheckoutRow
-            label="Card"
-            value={
-              card
-                ? `${card.card_number_masked}`
-                : "No card on file"
-            }
-          />
         </dl>
       </section>
 
@@ -79,42 +69,30 @@ export function MembershipPlanPanel({
       ) : (
         <p className="text-brand-body text-sm text-[color:var(--dash-muted)]">
           {gatewayBypassed
-            ? `Development mode: the payment processor is skipped. ${priceLabel} is still recorded as paid on your saved card.`
-            : `You will be charged ${priceLabel} on your saved HOLS card.`}
+            ? `Development mode: the payment processor is skipped. ${priceLabel} is still recorded as paid.`
+            : `You will be charged ${priceLabel} to complete this plan.`}
         </p>
       )}
 
       <div className="flex flex-col gap-2">
         {current ? (
-          <span className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)]">
+          <span className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white opacity-70">
             This is your current plan
           </span>
         ) : (
-          <button
+          <Button
             type="button"
-            disabled={purchasing || !card}
+            variant="primary"
+            size="md"
+            className="w-full"
+            disabled={purchasing}
             onClick={onPurchase}
-            className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white disabled:pointer-events-none disabled:opacity-60"
           >
             <SidebarSvgIcon name="check" size={15} strokeWidth={2.2} />
             {purchasing ? "Processing…" : `Pay ${priceLabel}`}
-          </button>
+          </Button>
         )}
-
-        <Link
-          href="/student/profile/card"
-          className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)]"
-        >
-          <SidebarSvgIcon name="payment" size={14} strokeWidth={1.9} />
-          {card ? "Use a different card" : "Add a payment card"}
-        </Link>
       </div>
-
-      {!card && !current ? (
-        <p className="text-brand-caption text-[color:var(--dash-faint)]">
-          Add a card in Settings, then return here to complete purchase.
-        </p>
-      ) : null}
     </div>
   );
 }

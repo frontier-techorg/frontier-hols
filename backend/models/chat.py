@@ -37,7 +37,6 @@ class FollowUpRequest(BaseModel):
     messages: List[ChatMessage] = Field(default_factory=list)
     question: str = Field(..., min_length=1, max_length=2000)
     top_k: Optional[int] = Field(default=None, ge=1, le=20)
-    focus_peptides: List[str] = Field(default_factory=list, max_length=8)
 
 
 class FollowUpResponse(BaseModel):
@@ -55,30 +54,12 @@ class SaveIntakeRequest(BaseModel):
 
 
 class SendMessageRequest(BaseModel):
-    question: str = Field(..., min_length=1, max_length=2000)
-    top_k: Optional[int] = Field(default=None, ge=1, le=20)
-    focus_peptides: List[str] = Field(default_factory=list, max_length=8)
+    query: str = Field(..., min_length=1, max_length=2000)
 
 
-class UpdateBoardRequest(BaseModel):
-    confidence: Optional[str] = Field(
-        default=None,
-        description="War Room dial: conservative | balanced | aggressive",
-    )
-    preferred: Optional[str] = Field(
-        default=None,
-        max_length=120,
-        description="Preferred peptide name to lock at rank #1",
-    )
-    clear_preferred: bool = Field(
-        default=False,
-        description="Clear locked preferred peptide",
-    )
-    focus_peptides: Optional[List[str]] = Field(
-        default=None,
-        max_length=8,
-        description="Peptides currently selected to talk about (one or many)",
-    )
+class ChatReplyData(BaseModel):
+    answer: str
+    suggested_questions: List[str] = Field(default_factory=list, max_length=3)
 
 
 class PatientSummary(BaseModel):
@@ -98,6 +79,7 @@ class StoredChatMessage(BaseModel):
     content: str
     created_at: str
     kind: Optional[str] = None
+    suggested_questions: Optional[List[str]] = None
 
 
 class ChatMessagesPagination(BaseModel):
@@ -163,6 +145,7 @@ class ChatHealthData(BaseModel):
 
 
 PatientDetailResponse = ApiSuccessResponse[PatientDetail]
+ChatReplyResponse = ApiSuccessResponse[ChatReplyData]
 PatientListResponse = ApiSuccessResponse[PatientListData]
 PatientMessagesResponse = ApiSuccessResponse[PatientMessagesData]
 AdviserBootstrapResponse = ApiSuccessResponse[AdviserBootstrapData]

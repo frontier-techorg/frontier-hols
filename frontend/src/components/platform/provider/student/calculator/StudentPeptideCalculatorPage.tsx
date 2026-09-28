@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
+import { Button } from "@/components/ui/Button";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
 import { CalculatorPageSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
 import { CalculatorPageLayout } from "@/components/platform/provider/student/calculator/CalculatorPageLayout";
 import { CalculatorVisual } from "@/components/platform/provider/student/calculator/CalculatorVisual";
@@ -21,21 +23,18 @@ import { cn } from "@/lib/utils";
 
 type Step = "syringe" | "peptide" | "water" | "dose" | "animating" | "result";
 
+const calcCardClass =
+  "dashboard-glass-card flex min-w-0 max-w-full flex-col rounded-2xl p-3 sm:p-4";
+
 const PROGRESS_STEPS: Array<{
   id: Exclude<Step, "animating" | "result">;
   label: string;
-  description: string;
 }> = [
-  { id: "syringe", label: "Syringe", description: "Choose syringe size" },
-  { id: "peptide", label: "Medication", description: "Enter peptide amount" },
-  { id: "water", label: "Water", description: "Add diluent volume" },
-  { id: "dose", label: "Dose", description: "Set desired dose" },
+  { id: "syringe", label: "Syringe" },
+  { id: "peptide", label: "Medication" },
+  { id: "water", label: "Water" },
+  { id: "dose", label: "Dose" },
 ];
-
-const calcSelectClass = "dashboard-field dashboard-field-select min-h-11 w-full py-0 sm:min-h-12";
-
-const calcAmountInputClass =
-  "calc-amount-field hols-plain-control min-w-0 flex-1 px-4 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 function isAmountDraft(raw: string): boolean {
   return raw === "" || /^\d*\.?\d*$/.test(raw);
@@ -95,11 +94,13 @@ export function StudentPeptideCalculatorPage({
   useGSAP(
     () => {
       registerGsap();
-      if (prefersReducedMotion() || !panelRef.current) return;
+      if (!panelRef.current) return;
+      gsap.set(panelRef.current, { autoAlpha: 1, y: 0 });
+      if (prefersReducedMotion()) return;
       gsap.fromTo(
         panelRef.current,
-        { autoAlpha: 0, y: 16 },
-        { autoAlpha: 1, y: 0, duration: 0.4, ease: "power2.out" },
+        { y: 12 },
+        { y: 0, duration: 0.35, ease: "power2.out", clearProps: "transform" },
       );
     },
     { dependencies: [step] },
@@ -201,8 +202,6 @@ export function StudentPeptideCalculatorPage({
     }
   }
 
-  const showVisual = step !== "animating";
-  const isWideLayout = step !== "animating";
 
   const content = !ready ? (
     <CalculatorPageSkeleton />
@@ -210,26 +209,32 @@ export function StudentPeptideCalculatorPage({
     <>
       {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
 
-      <section className="calculator-workspace dashboard-surface min-w-0 max-w-full overflow-x-hidden rounded-2xl p-2.5 max-[390px]:p-2 sm:p-5 md:p-6">
+      <div className="grid min-w-0 max-w-full gap-3 sm:gap-4">
         <CalculatorStepper progressIndex={progressIndex} step={step} />
 
         <div
           ref={panelRef}
           className={cn(
-            "mt-3 min-w-0 max-[390px]:mt-2.5 sm:mt-5 md:mt-6",
-            isWideLayout
-              // Mobile: amount card first, vial/syringe visual second.
-              // Desktop (lg+): same DOM order → amount left, visual right (3fr : 5fr).
-              ? "grid min-w-0 gap-3 max-[390px]:gap-2.5 md:gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,5fr)] lg:items-start lg:gap-6"
-              : "mx-auto w-full max-w-3xl",
+            "mt-3 min-w-0 max-[390px]:mt-2.5 sm:mt-4",
+            step === "animating"
+              ? "mx-auto w-full"
+              : "grid items-start gap-3 max-[390px]:gap-2.5 md:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] md:gap-4 lg:grid-cols-[minmax(18rem,24rem)_minmax(0,1fr)]",
           )}
         >
+          {step === "animating" ? (
+            <InjectionAnimation
+              onComplete={finishAnimation}
+              syringeMl={syringeMl}
+              peptideUnit={peptideUnit}
+              waterMl={Number(waterMl) || 1}
+              peptideAmount={Number(peptideAmount) || 10}
+            />
+          ) : (
+          <>
           <div className="order-1 flex min-h-0 min-w-0 flex-col">
             {step === "syringe" ? (
               <StepPanel
-                eyebrow="Select size"
                 title="Syringe size"
-                hint="Choose the syringe you will draw with for this reconstitution."
                 actions={
                   <StepActions
                     onBack={goBack}
@@ -239,30 +244,29 @@ export function StudentPeptideCalculatorPage({
                   />
                 }
               >
-                <select
-                    aria-label="Syringe size"
-                    value={String(syringeMl)}
-                    onChange={(event) => setSyringeMl(parseSyringePreset(event.target.value))}
-                    className={calcSelectClass}
-                  >
-                    {SYRINGE_SIZES_ML.map((size) => (
-                      <option key={size} value={size}>
-                        {size} ml
-                      </option>
-                    ))}
-                  </select>
+                <ProfileSelect
+                  id="calculator-syringe"
+                  label="Syringe size"
+                  hideLabel
+                  value={String(syringeMl)}
+                  onChange={(value) => setSyringeMl(parseSyringePreset(value))}
+                  options={SYRINGE_SIZES_ML.map((size) => ({
+                    value: String(size),
+                    label: `${size} ml`,
+                  }))}
+                />
               </StepPanel>
             ) : null}
 
             {step === "peptide" ? (
               <StepPanel
-                title="Total amount of dry medication in your vial"
-                hint="Enter the labeled peptide mass before adding bacteriostatic water."
+                title="Medication"
                 actions={
                   <StepActions onBack={goBack} onNext={goNext} nextLabel="Next" />
                 }
               >
                 <AmountRow
+                  id="calculator-peptide-unit"
                   value={peptideAmount}
                   onValueChange={setPeptideAmount}
                   unit={peptideUnit}
@@ -274,25 +278,30 @@ export function StudentPeptideCalculatorPage({
 
             {step === "water" ? (
               <StepPanel
-                title="Bacteriostatic water"
-                hint="Volume of bacteriostatic water you will add to reconstitute the vial."
+                title="Water"
                 actions={
                   <StepActions onBack={goBack} onNext={goNext} nextLabel="Next" />
                 }
               >
-                <AmountRow value={waterMl} onValueChange={setWaterMl} unitLabel="ml" />
+                <AmountRow
+                  id="calculator-water-unit"
+                  value={waterMl}
+                  onValueChange={setWaterMl}
+                  unit="ml"
+                  units={["ml"]}
+                />
               </StepPanel>
             ) : null}
 
             {step === "dose" ? (
               <StepPanel
-                title="Desired dose"
-                hint="The amount you want to draw for a single administration."
+                title="Dose"
                 actions={
                   <StepActions onBack={goBack} onNext={goNext} nextLabel="Calculate" />
                 }
               >
                 <AmountRow
+                  id="calculator-dose-unit"
                   value={doseAmount}
                   onValueChange={setDoseAmount}
                   unit={doseUnit}
@@ -302,28 +311,8 @@ export function StudentPeptideCalculatorPage({
               </StepPanel>
             ) : null}
 
-            {step === "animating" ? (
-              <div className="min-w-0 text-center">
-                <h2 className="font-sans text-sm font-semibold leading-[1.15] tracking-[0.01em] text-[color:var(--dash-text)] max-[390px]:text-[13px] sm:text-xl">
-                  Preparing your dose
-                </h2>
-                <p className="text-brand-body mt-1 text-xs text-[color:var(--dash-muted)] max-[390px]:text-[11px] sm:mt-1.5 sm:text-sm">
-                  Watch the reconstitution sequence
-                </p>
-                <div className="mt-2.5 min-w-0 max-[390px]:mt-2 sm:mt-5">
-                  <InjectionAnimation
-                    onComplete={finishAnimation}
-                    syringeMl={syringeMl}
-                    peptideUnit={peptideUnit}
-                    waterMl={Number(waterMl) || 1}
-                    peptideAmount={Number(peptideAmount) || 10}
-                  />
-                </div>
-              </div>
-            ) : null}
-
             {step === "result" && result ? (
-              <div className="hols-auth-card calc-step-card flex h-full min-w-0 max-w-full flex-col justify-center overflow-hidden rounded-xl p-4 text-left max-[390px]:p-3 sm:p-6">
+              <div className={cn(calcCardClass, "calc-step-card overflow-hidden text-left")}>
                 <h2 className="font-sans text-pretty text-base font-semibold leading-[1.15] tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl">
                   Results
                 </h2>
@@ -345,45 +334,41 @@ export function StudentPeptideCalculatorPage({
                   Draw to {result.unitsPerDose.toFixed(2)} units ({result.doseVolumeMl} ml) on your{" "}
                   {syringeMl} ml syringe.
                 </p>
-                <button
+                <Button
                   type="button"
                   onClick={restart}
-                  className="dashboard-navy-btn font-sans mt-5 inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-full px-5 text-sm font-semibold text-white sm:mt-6"
+                  className="lecture-page-action mt-5 w-full px-5 sm:mt-6"
                 >
                   Restart
-                </button>
+                </Button>
               </div>
             ) : null}
           </div>
 
-          {showVisual ? (
-            <div className="order-2 flex min-h-0 min-w-0">
-              <div className="w-full lg:sticky lg:top-4 lg:self-start">
-                <CalculatorVisual
-                  mode={visualMode}
-                  syringeMl={syringeMl}
-                  unitsPerDose={result?.unitsPerDose ?? 0}
-                  maxUnits={result?.maxUnitsOnSyringe ?? syringeMl * 100}
-                  waterFilled={step === "water" || step === "dose" || step === "result"}
-                  medicationFilled={step === "result"}
-                  peptideUnit={peptideUnit}
-                  waterMl={waterMl}
-                  peptideAmount={peptideAmount}
-                />
-              </div>
+          <div className="order-2 flex min-w-0">
+            <div className="flex w-full min-w-0 md:sticky md:top-4 md:self-start">
+              <CalculatorVisual
+                mode={visualMode}
+                syringeMl={syringeMl}
+                unitsPerDose={result?.unitsPerDose ?? 0}
+                maxUnits={result?.maxUnitsOnSyringe ?? syringeMl * 100}
+                waterFilled={step === "water" || step === "dose" || step === "result"}
+                medicationFilled={step === "result"}
+                peptideUnit={peptideUnit}
+                waterMl={waterMl}
+                peptideAmount={peptideAmount}
+              />
             </div>
-          ) : null}
+          </div>
+          </>
+          )}
         </div>
-      </section>
-
-      <p className="text-brand-caption px-1 text-center leading-relaxed text-[color:var(--dash-muted)]">
-        Research-use education tool only. Follow peptide documentation and institutional protocols.
-      </p>
+      </div>
     </>
   );
 
   if (embedded) {
-    return <div className="calculator-page grid w-full min-w-0 max-w-full gap-3 overflow-x-hidden sm:gap-4">{content}</div>;
+    return <div className="calculator-page grid w-full min-w-0 max-w-full gap-3 overflow-visible sm:gap-4">{content}</div>;
   }
 
   return <CalculatorPageLayout>{content}</CalculatorPageLayout>;
@@ -397,7 +382,7 @@ function CalculatorStepper({
   step: Step;
 }) {
   return (
-    <nav aria-label="Calculator steps" className="calc-stepper w-full min-w-0 px-0.5 sm:px-2">
+    <nav aria-label="Calculator steps" className="calc-stepper mx-auto w-full min-w-0 px-0.5 sm:px-2 md:max-w-2xl md:px-1">
       <ol className="relative m-0 flex list-none items-start justify-between gap-0 p-0">
         {PROGRESS_STEPS.map((item, index) => {
           const done = progressIndex > index || step === "result";
@@ -409,24 +394,24 @@ function CalculatorStepper({
           return (
             <li
               key={item.id}
-              className="relative flex min-w-0 flex-1 flex-col items-center text-center"
+              className="relative isolate flex min-w-0 flex-1 flex-col items-center text-center"
             >
               {index < PROGRESS_STEPS.length - 1 ? (
                 <span
                   aria-hidden
                   className={cn(
-                    "absolute left-[calc(50%+0.7rem)] right-[calc(-50%+0.7rem)] top-[0.7rem] h-[2px] sm:left-[calc(50%+1rem)] sm:right-[calc(-50%+1rem)] sm:top-[0.85rem]",
-                    connectorDone ? "bg-[#DDE466]" : "bg-[color:var(--dash-surface-border)]",
+                    "pointer-events-none absolute z-0 h-[2px] top-[0.8rem] left-[calc(50%+1.15rem)] right-[calc(-50%+1.15rem)] sm:top-[0.95rem] sm:left-[calc(50%+1.35rem)] sm:right-[calc(-50%+1.35rem)]",
+                    connectorDone ? "bg-[#C5D63A]" : "bg-[color:var(--dash-surface-border)]",
                   )}
                 />
               ) : null}
 
               <span
                 className={cn(
-                  "relative z-[1] flex h-6 w-6 items-center justify-center rounded-full sm:h-7 sm:w-7",
-                  done && "bg-[#DDE466] text-[#152744]",
-                  active && "border-2 border-[#DDE466] bg-[color:var(--dash-surface,#fff)]",
-                  pending && "border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-surface)]",
+                  "relative z-10 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8",
+                  done && "bg-[#C5D63A] text-[#152744] ring-2 ring-[#142644]",
+                  active && "bg-[#C5D63A] ring-2 ring-[#142644]",
+                  pending && "calc-step-node--pending border border-[color:var(--dash-surface-border)] bg-white",
                 )}
                 aria-current={active ? "step" : undefined}
               >
@@ -436,7 +421,7 @@ function CalculatorStepper({
                   <span
                     className={cn(
                       "h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5",
-                      active ? "bg-[#DDE466]" : "bg-[color:var(--dash-muted)]",
+                      active ? "bg-[#142644]" : "bg-[color:var(--dash-muted)]",
                     )}
                   />
                 )}
@@ -446,21 +431,11 @@ function CalculatorStepper({
                 className={cn(
                   "font-sans mt-2 w-full truncate px-0.5 text-[11px] font-semibold leading-tight tracking-[0.01em] sm:mt-2.5 sm:px-1 sm:text-sm",
                   active
-                    ? "text-[color:var(--dash-accent,#6f7a1c)]"
+                    ? "font-bold text-[#142644]"
                     : "text-[color:var(--dash-text)]",
                 )}
               >
                 {item.label}
-              </p>
-              <p
-                className={cn(
-                  "mt-0.5 hidden max-w-[8rem] text-xs leading-snug sm:block",
-                  active
-                    ? "text-[color:var(--dash-accent,#6f7a1c)]"
-                    : "text-[color:var(--dash-muted)]",
-                )}
-              >
-                {item.description}
               </p>
             </li>
           );
@@ -471,37 +446,21 @@ function CalculatorStepper({
 }
 
 function StepPanel({
-  eyebrow = "Enter amount",
   title,
-  hint,
   children,
   actions,
 }: {
-  eyebrow?: string;
   title: string;
-  hint: string;
   children: React.ReactNode;
   actions: React.ReactNode;
 }) {
   return (
-    <div className="hols-auth-card calc-step-card flex w-full min-w-0 max-w-full flex-col rounded-xl p-3 max-[390px]:p-2.5 sm:p-6">
-      <div className="mx-auto flex w-full min-w-0 max-w-sm flex-col items-center gap-3 text-center max-[390px]:gap-2.5 sm:gap-5 lg:mx-0 lg:max-w-none lg:items-start lg:text-left">
-        <div className="w-full min-w-0">
-          <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-muted)]">
-            {eyebrow}
-          </p>
-          <h2 className="font-sans mt-1 text-pretty text-sm font-semibold leading-[1.3] tracking-[0.01em] text-[color:var(--dash-text)] sm:mt-1.5 sm:text-lg md:text-xl">
-            {title}
-          </h2>
-          <p className="text-brand-body mt-1 text-pretty text-xs leading-snug text-[color:var(--dash-muted)] sm:mt-2 sm:text-sm sm:leading-relaxed">
-            {hint}
-          </p>
-        </div>
-        <div className="w-full min-w-0">{children}</div>
-        <div className="w-full min-w-0 border-t border-[color:var(--dash-surface-border)] pt-2.5 max-[390px]:pt-2 sm:pt-4">
-          {actions}
-        </div>
-      </div>
+    <div className={cn(calcCardClass, "gap-3")}>
+      <h2 className="font-sans text-base font-semibold leading-tight tracking-[0.01em] text-[color:var(--dash-text)]">
+        {title}
+      </h2>
+      <div className="w-full min-w-0">{children}</div>
+      {actions}
     </div>
   );
 }
@@ -530,40 +489,34 @@ function StepActions({
         <button
           type="button"
           onClick={onBack}
-          className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] sm:w-auto"
+          className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:w-auto"
         >
-          <SidebarSvgIcon name="previous" size={14} strokeWidth={2.2} />
+          <SidebarSvgIcon name="previous" size={16} />
           Back
         </button>
       ) : null}
-      <button
-        type="button"
-        onClick={onNext}
-        className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-semibold text-white sm:w-auto sm:px-6"
-      >
+      <Button type="button" onClick={onNext} className="lecture-page-action w-full px-5 sm:w-auto">
         {nextLabel}
-        {nextLabel !== "Calculate" ? (
-          <SidebarSvgIcon name="next" size={14} strokeWidth={2.2} />
-        ) : null}
-      </button>
+        {nextLabel !== "Calculate" ? <SidebarSvgIcon name="next" size={16} /> : null}
+      </Button>
     </div>
   );
 }
 
 function AmountRow({
+  id,
   value,
   onValueChange,
   unit,
   onUnitChange,
   units,
-  unitLabel,
 }: {
+  id: string;
   value: string;
   onValueChange: (value: string) => void;
-  unit?: MassUnit;
+  unit: string;
   onUnitChange?: (unit: MassUnit) => void;
-  units?: MassUnit[];
-  unitLabel?: string;
+  units: string[];
 }) {
   function handleChange(raw: string) {
     if (!isAmountDraft(raw)) return;
@@ -571,42 +524,32 @@ function AmountRow({
   }
 
   return (
-    <div className="grid w-full min-w-0 gap-2 text-left">
-      <span className="dashboard-field-label">Amount</span>
-      <div className="calc-amount-control dashboard-field hols-hover-border">
+    <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_6.75rem] items-end gap-2">
+      <div className="grid min-w-0 gap-2">
+        <label htmlFor={`${id}-amount`} className="dashboard-field-label">
+          Amount
+        </label>
         <input
+          id={`${id}-amount`}
           type="text"
           inputMode="decimal"
           autoComplete="off"
           spellCheck={false}
           value={value}
-          placeholder="Enter amount"
+          placeholder="Amount"
           onChange={(event) => handleChange(event.target.value)}
-          className={calcAmountInputClass}
-          aria-label="Amount"
+          className="dashboard-field [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
-        {unitLabel || (units && unit && onUnitChange) ? (
-          <span className="calc-amount-divider" aria-hidden />
-        ) : null}
-        {unitLabel ? (
-          <span className="calc-amount-unit-static">{unitLabel}</span>
-        ) : units && unit && onUnitChange ? (
-          <span className="calc-amount-unit">
-            <select
-              aria-label="Unit"
-              value={unit}
-              onChange={(event) => onUnitChange(event.target.value as MassUnit)}
-              className="calc-amount-unit-select hols-plain-control"
-            >
-              {units.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </span>
-        ) : null}
       </div>
+      <ProfileSelect
+        id={id}
+        label="Unit"
+        value={unit}
+        onChange={(next) => {
+          if (onUnitChange && (next === "g" || next === "mg" || next === "mcg")) onUnitChange(next);
+        }}
+        options={units.map((option) => ({ value: option, label: option }))}
+      />
     </div>
   );
 }

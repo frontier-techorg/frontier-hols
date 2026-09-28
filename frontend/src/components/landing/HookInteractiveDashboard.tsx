@@ -29,17 +29,16 @@ const THEME = {
   light: {
     chromeBg: "#ffffff",
     chromeUrl: "rgba(21, 39, 68, 0.04)",
-    pageBg:
-      "radial-gradient(100% 90% at 100% 0%, rgba(221, 228, 102, 0.55) 0%, transparent 55%), radial-gradient(90% 85% at 0% 100%, rgba(141, 195, 225, 0.5) 0%, transparent 58%), linear-gradient(150deg, #dceaf5 0%, #e8eef8 40%, #eef3d8 100%)",
-    pageBgSolid: "#e8eef8",
-    sidebarBg: "rgba(236, 244, 250, 0.72)",
-    sidebarBorder: "rgba(56, 83, 164, 0.12)",
+    pageBg: "#e5e5e5",
+    pageBgSolid: "#e5e5e5",
+    sidebarBg: "#ffffff",
+    sidebarBorder: "rgba(21, 39, 68, 0.12)",
     sidebarText: "#142644",
     sidebarMuted: "rgba(20, 38, 68, 0.62)",
-    sidebarHover: "rgba(56, 83, 164, 0.08)",
-    sidebarActive: "rgba(221, 228, 102, 0.18)",
+    sidebarHover: "rgba(20, 38, 68, 0.08)",
+    sidebarActive: "rgba(221, 228, 102, 0.28)",
     sidebarActiveShadow: "inset 0 0 0 1px rgba(221, 228, 102, 0.36)",
-    sidebarFooter: "rgba(255, 255, 255, 0.28)",
+    sidebarFooter: "#ffffff",
     cardBg: "rgba(255, 255, 255, 0.42)",
     cardBorder: "rgba(255, 255, 255, 0.55)",
     text: "#152744",
@@ -229,7 +228,7 @@ export function HookInteractiveDashboard({
   function openTool(id: string) {
     if (id === "lectures" || id === "calculator" || id === "advisor" || id === "profile" || id === "payment") {
       setActiveNav(id);
-    } else if (id === "plans" || id === "orders" || id === "card") {
+    } else if (id === "plans" || id === "orders") {
       setActiveNav("payment");
     } else if (id === "account") {
       setActiveNav("profile");

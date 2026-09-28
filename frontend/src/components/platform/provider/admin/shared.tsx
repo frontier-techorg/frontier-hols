@@ -5,6 +5,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } f
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Icon } from "@/components/icons";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
+import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 type PaginationControlsProps = {
@@ -15,6 +16,8 @@ type PaginationControlsProps = {
   total: number;
   loading?: boolean;
   compact?: boolean;
+  /** Lecture-style pager: no divider, navy Previous, yellow Next. */
+  appearance?: "default" | "lecture";
   onPrevious: () => void;
   onNext: () => void;
 };
@@ -27,39 +30,73 @@ export function PaginationControls({
   total,
   loading,
   compact,
+  appearance = "default",
   onPrevious,
   onNext,
 }: PaginationControlsProps) {
+  const lecture = appearance === "lecture";
+  const previousDisabled = !hasPrevious || loading;
+  const nextDisabled = !hasNext || loading;
+
   return (
     <div
       className={cn(
         "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
-        compact
-          ? "pt-1"
-          : "mt-5 border-t border-[color:var(--dash-surface-border)] pt-4",
+        lecture
+          ? "mt-4"
+          : compact
+            ? "pt-1"
+            : "mt-5 border-t border-[color:var(--dash-surface-border)] pt-4",
       )}
     >
       <p className="text-brand-caption text-[color:var(--dash-faint)]">
         {total} total · Page {page}
         {pageCount ? ` of ${pageCount}` : ""}
       </p>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-        <button
-          type="button"
-          disabled={!hasPrevious || loading}
-          onClick={onPrevious}
-          className="dashboard-pill-soft font-sans inline-flex min-h-9 items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <button
-          type="button"
-          disabled={!hasNext || loading}
-          onClick={onNext}
-          className="dashboard-pill-soft font-sans inline-flex min-h-9 items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50"
-        >
-          Next
-        </button>
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
+        {lecture ? (
+          <>
+            <button
+              type="button"
+              disabled={previousDisabled}
+              onClick={onPrevious}
+              className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
+            >
+              <SidebarSvgIcon name="previous" size={16} />
+              <span className="sm:hidden">Prev</span>
+              <span className="hidden sm:inline">Previous page</span>
+            </button>
+            <Button
+              type="button"
+              disabled={nextDisabled}
+              onClick={onNext}
+              className="lecture-page-action w-full px-5 sm:w-auto"
+            >
+              <span className="sm:hidden">Next</span>
+              <span className="hidden sm:inline">Next page</span>
+              <SidebarSvgIcon name="next" size={16} />
+            </Button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled={previousDisabled}
+              onClick={onPrevious}
+              className="dashboard-pill-soft font-sans inline-flex min-h-9 items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={nextDisabled}
+              onClick={onNext}
+              className="dashboard-pill-soft font-sans inline-flex min-h-9 items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50"
+            >
+              Next
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

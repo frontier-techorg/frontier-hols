@@ -1,15 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { LecturePlansDialog } from "@/components/platform/provider/student/lectures/LecturePlansDialog";
 import { LecturesPageLayout } from "@/components/platform/provider/student/lectures/LecturesPageLayout";
-import { MembershipLockedPanel } from "@/components/platform/provider/student/membership/MembershipGate";
 
 export function LectureMembershipLockedScreen() {
+  const router = useRouter();
+
   return (
     <LecturesPageLayout>
-      <MembershipLockedPanel
-        title="Membership required"
-        description="Unlock lecture details, lessons, quizzes, and the course calculator with an active membership."
-      />
+      <LecturePlansDialog open onClose={() => router.push("/student/lectures")} />
     </LecturesPageLayout>
   );
 }

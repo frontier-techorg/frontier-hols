@@ -51,6 +51,8 @@ type InjectionAnimationProps = {
   peptideUnit?: MassUnit;
   waterMl?: number;
   peptideAmount?: number;
+  /** Already inside the calculator illustration card. */
+  embedded?: boolean;
 };
 
 const STAGE = {
@@ -290,6 +292,7 @@ export function InjectionAnimation({
   peptideUnit = "mg",
   waterMl = 1,
   peptideAmount = 10,
+  embedded = false,
 }: InjectionAnimationProps) {
   const [status, setStatus] = useState("Positioning syringe over bacteriostatic water…");
   const [done, setDone] = useState(false);
@@ -937,9 +940,9 @@ export function InjectionAnimation({
   const sceneMedFill = medPowderFillFromAmount(peptideAmount, peptideUnit);
 
   return (
-    <div className="mx-auto mt-2 w-full min-w-0">
+    <div className="mx-auto w-full min-w-0">
       <p
-        className="mb-1.5 break-words px-1 text-center text-[10px] font-medium leading-snug text-[color:var(--dash-text)] max-[390px]:mb-1 max-[390px]:text-[9px] sm:mb-4 sm:text-base"
+        className="mb-2 break-words px-1 text-center text-sm font-medium leading-snug text-[color:var(--dash-text)]"
         aria-live="polite"
       >
         {status}
@@ -947,7 +950,11 @@ export function InjectionAnimation({
 
       <div
         ref={stageRef}
-        className="dashboard-glass-card relative isolate mx-auto w-full min-w-0 overflow-hidden rounded-2xl px-1 pb-2 pt-2 max-[390px]:rounded-xl max-[390px]:px-0.5 max-[390px]:pb-1.5 max-[390px]:pt-1.5 sm:px-10 sm:pb-5 sm:pt-5 md:px-12 md:pt-6"
+        className={
+          embedded
+            ? "relative isolate mx-auto w-full min-w-0 overflow-visible px-1 pb-1 pt-1"
+            : "dashboard-glass-card relative isolate mx-auto w-full min-w-0 overflow-hidden rounded-2xl px-1 pb-2 pt-2 max-[390px]:rounded-xl max-[390px]:px-0.5 max-[390px]:pb-1.5 max-[390px]:pt-1.5 sm:px-10 sm:pb-5 sm:pt-5 md:px-12 md:pt-6"
+        }
       >
         <DrawScene
           sceneRef={sceneRef}

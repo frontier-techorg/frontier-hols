@@ -7,10 +7,10 @@ import { Icon, Menu } from "@/components/icons";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
 import {
   DirectoryMobileRow,
-  DirectoryNativeSelect,
   DirectorySearchBar,
   PaginationControls,
 } from "@/components/platform/provider/admin/shared";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
 import { adminNav } from "@/components/platform/provider/admin/adminNav";
 import {
   FinanceOverviewCard,
@@ -367,7 +367,7 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
       brandBackdrop
       nav={adminNav}
     >
-      <div className="dashboard-screen lectures-page min-w-0 overflow-x-hidden">
+      <div className="dashboard-screen lectures-page orders-page min-w-0 overflow-x-hidden">
         <header className="mb-4 flex min-h-10 min-w-0 items-center gap-2 sm:mb-5 sm:min-h-12 sm:gap-3 md:gap-4">
           <button
             type="button"
@@ -382,9 +382,9 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
               type="button"
               aria-label="Back to affiliates"
               onClick={() => router.push("/admin/affiliates")}
-              className="adviser-chat-back-btn dashboard-navy-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full sm:h-12 sm:w-12"
+              className="lecture-back-btn flex h-10 w-8 shrink-0 items-center justify-center rounded-full"
             >
-              <SidebarSvgIcon name="previous" size={18} strokeWidth={2.4} />
+              <SidebarSvgIcon name="back" size={32} className="lecture-back-mark" />
             </button>
           ) : null}
           <div className="min-w-0 flex-1">
@@ -417,10 +417,11 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
               label="Search students"
               className="mt-0 w-full min-w-0 sm:max-w-[22rem] sm:shrink-0"
             />
-            <div className="flex min-w-0 items-center gap-2 sm:ml-auto">
-              <DirectoryNativeSelect
+            <div className="grid w-full grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto">
+              <ProfileSelect
                 id="student-orders-filter"
-                label="Order filter"
+                label="Orders"
+                hideLabel
                 value={emptyOrders ? "empty" : "all"}
                 onChange={(value) => {
                   setEmptyOrders(value === "empty");
@@ -430,10 +431,12 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                   { value: "all", label: "All" },
                   { value: "empty", label: "No orders" },
                 ]}
+                className="w-full sm:w-[9.75rem]"
               />
-              <DirectoryNativeSelect
+              <ProfileSelect
                 id="student-sort-filter"
-                label="Sort students"
+                label="Sort"
+                hideLabel
                 value={sort}
                 onChange={(value) => {
                   setSort(value === "oldest" ? "oldest" : "newest");
@@ -443,6 +446,7 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                   { value: "newest", label: "Newest" },
                   { value: "oldest", label: "Oldest" },
                 ]}
+                className="w-full sm:w-[9.75rem]"
               />
             </div>
           </div>
@@ -512,6 +516,7 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                               label: "Your earnings",
                               value: formatMoney(student.admin_earned ?? student.total_spent ?? 0, currency),
                             },
+                            { label: "Action", value: <span className="portal-action-link">View</span> },
                           ]}
                         />
                       </li>
@@ -537,8 +542,8 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                         <th scope="col" className="px-3 py-3 font-semibold">
                           Orders
                         </th>
-                        <th scope="col" className="px-4 py-3 text-right font-semibold sm:px-5">
-                          <span className="sr-only">Open</span>
+                        <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                          Action
                         </th>
                       </tr>
                     </thead>
@@ -553,7 +558,7 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                             role="button"
                             aria-label={`Open ${studentName(student)} details`}
                             className={cn(
-                              "cursor-pointer outline-none transition focus-visible:bg-[color:var(--dash-soft)]",
+                              "orders-table-row cursor-pointer outline-none transition focus-visible:bg-[color:var(--dash-soft)]",
                               active ? "bg-[color:var(--dash-soft)]" : "hover:bg-[color:var(--dash-soft)]",
                             )}
                             onClick={() => setSelectedId(student.user_id)}
@@ -602,11 +607,8 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                                 {student.paid_order_count ?? student.order_count ?? 0}
                               </span>
                             </td>
-                            <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 text-right sm:px-5">
-                              <span className="inline-flex items-center justify-end gap-1 text-brand-caption font-medium text-[color:var(--dash-accent)]">
-                                View
-                                <SidebarSvgIcon name="next" size={14} />
-                              </span>
+                            <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                              <span className="portal-action-link">View</span>
                             </td>
                           </tr>
                         );
@@ -615,11 +617,13 @@ export function AdminStudentsPage({ affiliateId }: { affiliateId?: string }) {
                   </table>
                 </div>
 
-                {!isSearching ? (
+                {!isSearching && (hasNext || hasPrevious || page > 1) ? (
                   <div className="px-4 pb-4 sm:px-5">
                     <PaginationControls
+                      appearance="lecture"
                       page={page}
                       total={total}
+                      pageCount={Math.max(1, Math.ceil(total / PAGE_SIZE))}
                       hasNext={hasNext}
                       hasPrevious={hasPrevious}
                       loading={loading}

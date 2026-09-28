@@ -93,7 +93,7 @@ export function SalesMetricGrid({
               href={item.href}
               className={cn(
                 className,
-                "block outline-none transition hover:brightness-[1.03] focus-visible:ring-2 focus-visible:ring-[color:var(--dash-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+                "block outline-none transition hover:bg-[color:var(--sidebar-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--dash-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
               )}
             >
               {content}
@@ -227,6 +227,32 @@ export function SalesBarChart({
   );
 }
 
+function EmptyChartState({ label, fill = false }: { label: string; fill?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-3 text-center",
+        fill ? "absolute inset-0" : "mt-4 min-h-64 sm:min-h-72",
+      )}
+    >
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[color:var(--dash-soft)] text-[color:var(--dash-muted)]">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M4 19h16" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+          <path d="M4 19V5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+          <path
+            d="M7.5 14.5 11 10l3 2.5L18.5 7"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+      <p className="font-sans text-sm font-medium text-[color:var(--dash-muted)]">{label}</p>
+    </div>
+  );
+}
+
 export function SalesLineChart({
   title,
   caption,
@@ -235,6 +261,7 @@ export function SalesLineChart({
   money = false,
   headerRight,
   emptyLabel = "No earnings in this range yet.",
+  fill = false,
 }: {
   title: string;
   caption?: string;
@@ -243,10 +270,11 @@ export function SalesLineChart({
   money?: boolean;
   headerRight?: ReactNode;
   emptyLabel?: string;
+  fill?: boolean;
 }) {
   const width = 640;
-  const height = 248;
-  const pad = { top: 16, right: 22, bottom: 36, left: 44 };
+  const height = 360;
+  const pad = { top: 20, right: 22, bottom: 40, left: 48 };
   const innerWidth = width - pad.left - pad.right;
   const innerHeight = height - pad.top - pad.bottom;
   const rawMax = Math.max(0, ...series.flatMap((item) => item.values));
@@ -279,7 +307,12 @@ export function SalesLineChart({
   }
 
   return (
-    <section className="dashboard-glass-card min-w-0 overflow-hidden rounded-2xl p-3.5 sm:p-5">
+    <section
+      className={cn(
+        "dashboard-glass-card min-w-0 overflow-hidden rounded-2xl p-3.5 sm:p-5",
+        fill && "flex h-full min-h-0 flex-col",
+      )}
+    >
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
@@ -292,13 +325,23 @@ export function SalesLineChart({
         {headerRight ? <div className="min-w-0 w-full sm:w-auto">{headerRight}</div> : null}
       </div>
       {empty ? (
-        <p className="text-brand-body mt-6 text-sm text-[color:var(--dash-muted)]">{emptyLabel}</p>
+        fill ? (
+          <div className="relative mt-4 min-h-48 flex-1 sm:min-h-56">
+            <EmptyChartState label={emptyLabel} fill />
+          </div>
+        ) : (
+          <EmptyChartState label={emptyLabel} />
+        )
       ) : (
         <>
-          <div className="mt-4 min-w-0">
+          <div className={cn("mt-4 min-w-0", fill ? "relative min-h-48 flex-1 sm:min-h-56" : undefined)}>
             <svg
               viewBox={`0 0 ${width} ${height}`}
-              className="sales-chart h-[12.5rem] w-full max-w-full sm:h-60"
+              preserveAspectRatio="xMidYMid meet"
+              className={cn(
+                "sales-chart block w-full max-w-full",
+                fill ? "absolute inset-0 h-full" : "h-64 sm:h-72",
+              )}
               role="img"
               aria-label={title}
             >

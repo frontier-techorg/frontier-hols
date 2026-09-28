@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import { formatMoney } from "@/lib/integrate/provider/student/payment/types";
 import type { WebinarSummary } from "@/lib/integrate/provider/student/webinars/types";
@@ -74,7 +74,8 @@ export function WebinarListPanel({ webinars }: WebinarListPanelProps) {
               <h2 className="font-sans line-clamp-2 text-base font-bold tracking-[0.01em] text-[color:var(--dash-text)]">
                 {webinar.title}
               </h2>
-              <p className="text-brand-caption mt-1.5 text-[color:var(--dash-muted)]">
+              <p className="mt-1 font-sans text-sm text-[color:var(--dash-muted)]">
+                <span className="font-medium text-[color:var(--dash-faint)]">Time</span>{" "}
                 {formatWebinarWhen(webinar.starts_at)}
               </p>
               <p className="text-brand-caption mt-1 text-[color:var(--dash-faint)]">
@@ -90,21 +91,21 @@ export function WebinarListPanel({ webinars }: WebinarListPanelProps) {
                   href={webinar.join_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="dashboard-pill-soft font-sans inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-4 text-sm font-medium sm:min-h-10"
+                  className="webinar-status-btn lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 flex-1 items-center justify-center rounded-full px-4 text-sm font-medium text-white"
                 >
                   Join
                 </a>
               ) : (
-                <span className="dashboard-pill-soft font-sans inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-4 text-sm font-medium sm:min-h-10">
+                <span className="webinar-status-btn lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 flex-1 items-center justify-center rounded-full px-4 text-sm font-medium text-white">
                   {isBooked(webinar) ? "Booked" : isSoldOut(webinar) ? "Full" : "Open"}
                 </span>
               )}
-              <Link
+              <Button
                 href={`/student/webinars/${encodeURIComponent(webinar.webinar_id)}`}
-                className="dashboard-navy-btn font-sans inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-4 text-sm font-medium text-white sm:min-h-10"
+                className="lecture-page-action flex-1 px-4"
               >
                 View
-              </Link>
+              </Button>
             </div>
           </div>
         </article>

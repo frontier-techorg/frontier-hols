@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function StudentOrdersRoute() {
+/** Legacy payment orders URL */
+export default function StudentPaymentOrdersRoute() {
   redirect("/student/profile/orders");
 }

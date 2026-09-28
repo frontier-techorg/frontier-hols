@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { LessonContentSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
+import { Button } from "@/components/ui/Button";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import {
   LessonQuizOverlay,
@@ -72,9 +73,7 @@ export function LessonContentPanel({
   const router = useRouter();
   const [quizOpen, setQuizOpen] = useState(false);
   const [latestResult, setLatestResult] = useState<LessonQuizResult | null>(null);
-  const [showTop, setShowTop] = useState(false);
   const pageRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
   const hasQuiz = lesson.variants.length > 0;
   const hasContent =
     Boolean(lesson.fact || lesson.text_content || lesson.study_bullets) || hasQuiz;
@@ -108,30 +107,6 @@ export function LessonContentPanel({
     { dependencies: [lesson.lesson_id], scope: pageRef },
   );
 
-  // Reading progress rail + floating scroll-to-top, tracked against page scroll.
-  useEffect(() => {
-    const article = pageRef.current;
-    const bar = progressRef.current;
-    if (!article) return;
-
-    const update = () => {
-      const rect = article.getBoundingClientRect();
-      const total = rect.height - window.innerHeight;
-      const scrolled = Math.min(Math.max(-rect.top, 0), Math.max(total, 1));
-      const pct = total > 0 ? (scrolled / total) * 100 : rect.top <= 0 ? 100 : 0;
-      if (bar) bar.style.width = `${pct}%`;
-      setShowTop(window.scrollY > 480);
-    };
-
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, [lesson.lesson_id]);
-
   // Reset to the top when a new lesson opens (next/prev, sidebar, deep link).
   useEffect(() => {
     scrollAppToTopSoon();
@@ -161,12 +136,6 @@ export function LessonContentPanel({
     <div className="course-book-open relative min-w-0 overflow-visible">
       <div className="course-book-open-spine pointer-events-none absolute left-0 z-0 hidden w-3 lg:block" aria-hidden />
 
-      <div className="sticky top-0 z-[3] mb-3">
-        <div className="lesson-progress-track">
-          <div ref={progressRef} className="lesson-progress-fill" />
-        </div>
-      </div>
-
       <article
         ref={pageRef}
         className="course-book-page relative z-[2] min-w-0 overflow-hidden rounded-2xl"
@@ -174,7 +143,7 @@ export function LessonContentPanel({
       >
         <div className="course-book-page-grain pointer-events-none absolute inset-0 rounded-[inherit]" aria-hidden />
 
-        <header className="relative border-b border-[color:var(--dash-surface-border)] px-4 pb-4 pt-4 sm:px-7 sm:pb-5 sm:pt-6 md:px-8">
+        <header className="relative px-4 pb-4 pt-4 sm:px-7 sm:pb-5 sm:pt-6 md:px-8">
           <div className="flex items-center justify-between gap-3">
             <p className="text-brand-caption min-w-0 font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
               Lesson {lesson.order}
@@ -191,7 +160,7 @@ export function LessonContentPanel({
             {lesson.title}
           </h2>
           {(lesson.l1_name || lesson.l2_name) ? (
-            <p className="text-brand-body mt-2 text-[color:var(--dash-muted)]">
+            <p className="mt-2 font-sans text-sm text-[color:var(--dash-muted)]">
               {[lesson.l1_name, lesson.l2_name].filter(Boolean).join(" · ")}
             </p>
           ) : null}
@@ -223,13 +192,13 @@ export function LessonContentPanel({
               ) : null}
 
               {!hasContent ? (
-                <p className="text-brand-body py-8 text-center text-[color:var(--dash-faint)]">
+                <p className="py-8 text-center font-sans text-sm text-[color:var(--dash-faint)]">
                   No lesson content available yet.
                 </p>
               ) : null}
 
               {latestResult ? (
-                <div data-reveal>
+                <div data-reveal className="min-w-0">
                   <LessonQuizResultCard
                     result={latestResult}
                     courseId={courseId}
@@ -237,26 +206,32 @@ export function LessonContentPanel({
                   />
                 </div>
               ) : hasQuiz ? (
-                <section data-reveal className="dashboard-glass-card course-book-quiz-band rounded-2xl px-4 py-4 sm:px-5 sm:py-5">
-                  <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
-                    Practice quiz
-                  </p>
-                  <h3 className="font-sans mt-1 text-lg font-semibold tracking-[0.005em] text-[color:var(--dash-text)]">
-                    {lesson.variants.length} question{lesson.variants.length === 1 ? "" : "s"} · 5 minute
-                    limit
-                  </h3>
-                  <p className="text-brand-body mt-2 max-w-2xl text-[color:var(--dash-muted)]">
-                    Finish this page, then take the quiz when you are ready. You will confirm before the
-                    countdown starts.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setQuizOpen(true)}
-                    className="dashboard-navy-btn font-sans mt-4 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10 sm:w-auto"
-                  >
-                    <SidebarSvgIcon name="quiz" size={15} />
-                    Take quiz
-                  </button>
+                <section
+                  data-reveal
+                  className="course-book-quiz-band @container min-w-0 rounded-2xl px-4 py-4 sm:px-5 sm:py-5"
+                >
+                  <div className="flex min-w-0 flex-col gap-4 @min-[26rem]:flex-row @min-[26rem]:items-center @min-[26rem]:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
+                        Practice quiz
+                      </p>
+                      <h3 className="font-sans mt-1 break-words text-lg font-semibold tracking-[0.005em] text-[color:var(--dash-text)]">
+                        {lesson.variants.length} question{lesson.variants.length === 1 ? "" : "s"} · 5 minute limit
+                      </h3>
+                      <p className="mt-2 max-w-2xl font-sans text-sm leading-6 text-[color:var(--dash-muted)]">
+                        Finish this page, then take the quiz when you are ready. You will confirm before the
+                        countdown starts.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuizOpen(true)}
+                      className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white @min-[26rem]:w-auto"
+                    >
+                      <SidebarSvgIcon name="quiz" size={15} />
+                      Take quiz
+                    </button>
+                  </div>
                 </section>
               ) : null}
             </div>
@@ -264,7 +239,7 @@ export function LessonContentPanel({
         </div>
 
         {(prevLessonId || nextLessonId) && (
-          <footer className="relative flex flex-col gap-3 border-t border-[color:var(--dash-surface-border)] px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-7 md:px-8">
+          <footer className="@container relative flex min-w-0 flex-col gap-3 px-4 py-4 sm:px-7 md:px-8 @min-[26rem]:flex-row @min-[26rem]:flex-wrap @min-[26rem]:items-center @min-[26rem]:justify-between">
             <div className="flex items-center gap-3">
               <p className="text-brand-caption text-[color:var(--dash-faint)]">
                 {currentIndex && total ? `Page ${currentIndex} / ${total}` : "Turn the page"}
@@ -284,49 +259,33 @@ export function LessonContentPanel({
                 </span>
               ) : null}
             </div>
-            <div className="flex w-full gap-2 sm:w-auto">
+            <div className="flex w-full min-w-0 gap-2 @min-[26rem]:w-auto">
               {prevLessonId ? (
                 <Link
                   href={lessonHref(courseId, prevLessonId, topicId, l1Name)}
                   onClick={() => scrollAppToTop()}
-                  className="lesson-prev-cta dashboard-pill-soft font-sans inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)] transition sm:min-h-10 sm:flex-initial"
+                  className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white @min-[26rem]:flex-initial"
                 >
                   <SidebarSvgIcon name="previous" size={16} />
-                  <span className="sm:hidden">Prev</span>
-                  <span className="hidden sm:inline">Previous page</span>
+                  <span className="@min-[26rem]:hidden">Prev</span>
+                  <span className="hidden @min-[26rem]:inline">Previous page</span>
                 </Link>
               ) : null}
               {nextLessonId ? (
-                <Link
+                <Button
                   href={lessonHref(courseId, nextLessonId, topicId, l1Name)}
                   onClick={() => scrollAppToTop()}
-                  className="lesson-next-cta dashboard-navy-btn font-sans inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white transition sm:min-h-10 sm:flex-initial"
+                  className="lecture-page-action min-w-0 flex-1 px-5 @min-[26rem]:flex-initial"
                 >
-                  <span className="sm:hidden">Next</span>
-                  <span className="hidden sm:inline">Next page</span>
+                  <span className="@min-[26rem]:hidden">Next</span>
+                  <span className="hidden @min-[26rem]:inline">Next page</span>
                   <SidebarSvgIcon name="next" size={16} />
-                </Link>
+                </Button>
               ) : null}
             </div>
           </footer>
         )}
       </article>
-
-      <button
-        type="button"
-        onClick={() => {
-          if (prefersReducedMotion()) {
-            scrollAppToTop();
-            return;
-          }
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-        className="lesson-to-top dashboard-navy-btn"
-        data-visible={showTop ? "true" : "false"}
-        aria-label="Back to top"
-      >
-        <SidebarSvgIcon name="up" size={18} />
-      </button>
 
       <LessonQuizOverlay
         open={quizOpen}

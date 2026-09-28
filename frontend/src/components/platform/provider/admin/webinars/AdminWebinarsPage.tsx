@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { Icon, Menu } from "@/components/icons";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
-import { DirectoryNativeSelect, DirectorySearchBar, PaginationControls } from "@/components/platform/provider/admin/shared";
+import { DirectorySearchBar, PaginationControls } from "@/components/platform/provider/admin/shared";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
+import { Button } from "@/components/ui/Button";
 import {
   CreateWebinarDialog,
   type CreateWebinarFormValues,
@@ -174,7 +175,7 @@ export function AdminWebinarsPage() {
       brandBackdrop
       nav={adminNav}
     >
-      <div className="dashboard-screen lectures-page min-w-0 overflow-x-hidden">
+      <div className="dashboard-screen lectures-page webinars-page min-w-0 overflow-x-hidden">
         <header className="mb-4 flex min-h-10 min-w-0 items-center gap-2 sm:mb-5 sm:min-h-12 sm:gap-3 md:gap-4">
           <button
             type="button"
@@ -187,15 +188,14 @@ export function AdminWebinarsPage() {
           <h1 className="font-sans min-w-0 flex-1 truncate text-lg font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
             Webinars
           </h1>
-          <button
+          <Button
             type="button"
-            aria-label="New webinar"
             onClick={openCreateDialog}
-            className="dashboard-navy-btn font-sans inline-flex h-10 w-10 min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-medium tracking-[0.01em] text-white sm:h-10 sm:w-auto sm:px-4"
+            className="lecture-page-action h-10 w-10 min-h-10 shrink-0 px-0 sm:w-auto sm:px-4"
           >
             <SidebarSvgIcon name="plus" size={15} strokeWidth={2.2} />
             <span className="hidden sm:inline">New webinar</span>
-          </button>
+          </Button>
         </header>
 
         <div className="grid w-full min-w-0 gap-3 sm:gap-4">
@@ -210,17 +210,21 @@ export function AdminWebinarsPage() {
               label="Search webinars"
               className="mt-0 w-full min-w-0 sm:max-w-[22rem] sm:shrink-0"
             />
-            <div className="flex min-w-0 items-center gap-2 sm:ml-auto">
-              <DirectoryNativeSelect
+            <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto sm:items-center">
+              <ProfileSelect
                 id="webinar-status-filter"
                 label="Filter webinars"
+                hideLabel
+                className="w-full sm:w-[9.75rem]"
                 value={statusFilter}
                 onChange={(value) => setStatusFilter(value as StatusFilter)}
                 options={STATUS_FILTER_OPTIONS}
               />
-              <DirectoryNativeSelect
+              <ProfileSelect
                 id="webinar-sort-filter"
                 label="Sort webinars"
+                hideLabel
+                className="w-full sm:w-[9.75rem]"
                 value={sort}
                 onChange={(value) => setSort(value === "oldest" ? "oldest" : "newest")}
                 options={[
@@ -261,13 +265,9 @@ export function AdminWebinarsPage() {
               <p className="text-brand-body mt-1.5 max-w-sm text-[color:var(--dash-muted)]">
                 Create a session with a cover image and join link so students can find and book it.
               </p>
-              <button
-                type="button"
-                onClick={openCreateDialog}
-                className="dashboard-navy-btn font-sans mt-4 inline-flex min-h-11 items-center justify-center rounded-full px-5 text-sm font-semibold text-white sm:min-h-10"
-              >
+              <Button type="button" onClick={openCreateDialog} className="lecture-page-action mt-4 px-5">
                 Create first webinar
-              </button>
+              </Button>
             </section>
           ) : noMatches ? (
             <section className="dashboard-glass-card rounded-2xl px-5 py-12 text-center">
@@ -335,24 +335,26 @@ export function AdminWebinarsPage() {
                       <button
                         type="button"
                         onClick={() => void togglePublish(webinar)}
-                        className="dashboard-pill-soft font-sans inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-4 text-sm font-medium sm:min-h-10"
+                        className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 min-h-10 flex-1 items-center justify-center rounded-full px-4 text-sm font-medium"
                       >
                         {webinar.status === "published" ? "Unpublish" : "Publish"}
                       </button>
-                      <Link
+                      <Button
                         href={`/admin/webinars/${encodeURIComponent(webinar.webinar_id)}`}
-                        className="dashboard-navy-btn font-sans inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-4 text-sm font-medium text-white sm:min-h-10"
+                        className="lecture-page-action flex-1 px-4"
                       >
                         Manage
-                      </Link>
+                      </Button>
                     </div>
                   </div>
                 </article>
               ))}
             </div>
-            {pagination.total > 0 ? (
+            {(pagination.has_next || pagination.has_previous || pagination.total_pages > 1) ? (
               <PaginationControls
+                appearance="lecture"
                 page={pagination.page}
+                pageCount={Math.max(1, pagination.total_pages || Math.ceil(pagination.total / PAGE_SIZE))}
                 hasNext={pagination.has_next}
                 hasPrevious={pagination.has_previous}
                 total={pagination.total}

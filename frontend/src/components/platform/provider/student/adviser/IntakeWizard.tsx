@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
+import { Button } from "@/components/ui/Button";
 import { authFieldClass, authLabelClass } from "@/components/platform/auth/auth-styles";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import type {
@@ -11,16 +13,14 @@ import type {
 } from "@/lib/integrate/provider/student/chat";
 import {
   AGE_MAX,
-  AGE_MIN,
   CHILD_MAX_AGE,
-  heightRangeForAge,
   isPregnancyApplicable,
   isSnapshotMetricsValid,
   METRIC_MAX_DIGITS,
   parseIntakeAge,
   sanitizeIntakeAnswers,
+  suggestSnapshotMetrics,
   validateSnapshotMetrics,
-  weightRangeForAge,
 } from "@/lib/integrate/provider/student/chat/intakeDependencies";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +79,7 @@ function OptionCheck({ checked }: { checked: boolean }) {
 
 const choiceCardClass = (checked: boolean) =>
   cn(
-    "quiz-option-card adviser-option-card adviser-choice-card text-brand-body flex min-h-12 min-w-0 items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition active:scale-[0.99]",
+    "quiz-option-card adviser-option-card adviser-choice-card font-sans flex min-h-10 min-w-0 items-center gap-3 rounded-xl border px-3.5 text-left text-sm transition active:scale-[0.99]",
     checked
       ? "is-selected"
       : "border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] text-[color:var(--dash-muted)] hols-option-hover",
@@ -106,13 +106,9 @@ function IntakeChoiceGroup({
   const columns =
     layout === "stack"
       ? "grid-cols-1"
-      : layout === "grid"
-        ? "grid-cols-1 sm:grid-cols-2"
-        : options.length <= 3
-          ? "grid-cols-1 md:grid-cols-3"
-          : options.length <= 4
-            ? "grid-cols-1 sm:grid-cols-2"
-            : "grid-cols-1";
+      : layout === "grid" || options.length <= 4
+        ? "grid-cols-1 @min-[28rem]:grid-cols-2"
+        : "grid-cols-1";
 
   return (
     <fieldset className="adviser-intake-field min-w-0 space-y-2.5">
@@ -160,21 +156,15 @@ function FieldLabel({
   required?: boolean;
   children: React.ReactNode;
 }) {
-  const content = (
-    <>
-      <span>{children}</span>
-      {required ? <span className="whitespace-nowrap"> *</span> : null}
-    </>
-  );
-  const className = cn(authLabelClass, "inline-flex min-w-0 flex-wrap items-baseline");
+  const className = authLabelClass;
   if (htmlFor) {
     return (
       <label htmlFor={htmlFor} className={className}>
-        {content}
+        {children}
       </label>
     );
   }
-  return <span className={className}>{content}</span>;
+  return <span className={className}>{children}</span>;
 }
 
 function clipIntegerInput(raw: string, maxDigits: number, maxValue?: number) {
@@ -203,28 +193,29 @@ function IntakeSelect({
   placeholder?: string;
 }) {
   const hasEmptyOption = options.some((option) => option.value === "");
-  const selectOptions = hasEmptyOption
-    ? options
-    : [{ value: "", label: placeholder }, ...options];
 
   return (
     <div className="adviser-intake-field grid min-w-0 gap-2">
       <label htmlFor={id} className="dashboard-field-label">
         {label}
-        {required ? <span className="whitespace-nowrap"> *</span> : null}
       </label>
-      <select
+      <ProfileSelect
         id={id}
+        label={label}
+        hideLabel
+        className="adviser-select gap-0"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="dashboard-field dashboard-field-select"
-      >
-        {selectOptions.map((option) => (
-          <option key={`${option.value}-${option.label}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        onChange={onChange}
+        placeholder={hasEmptyOption ? undefined : placeholder}
+        portalToBody
+        menuZIndex={200}
+        options={(hasEmptyOption ? options : options.filter((option) => option.value !== "")).map(
+          (option) => ({
+            value: option.value,
+            label: option.label,
+          }),
+        )}
+      />
     </div>
   );
 }
@@ -236,8 +227,8 @@ function IntakeNumberField({
   onChange,
   maxDigits = METRIC_MAX_DIGITS,
   maxValue,
-  hint,
   error,
+  suggestion,
 }: {
   label: string;
   required?: boolean;
@@ -247,6 +238,7 @@ function IntakeNumberField({
   maxValue?: number;
   hint?: string;
   error?: string;
+  suggestion?: string;
 }) {
   return (
     <label className="adviser-intake-field grid min-w-0 self-start gap-2">
@@ -258,15 +250,16 @@ function IntakeNumberField({
         onChange={(event) => onChange(clipIntegerInput(event.target.value, maxDigits, maxValue))}
         className={cn(
           authFieldClass,
-          "adviser-field adviser-number-field min-h-11 px-4 sm:min-h-12",
+          "adviser-field adviser-number-field h-10 min-h-10 px-3.5 text-sm",
           error && "border-[color:var(--dash-navy)]",
         )}
         aria-invalid={Boolean(error)}
+        aria-required={required || undefined}
       />
       {error ? (
         <p className="text-brand-caption text-[color:var(--dash-navy)]">{error}</p>
-      ) : hint ? (
-        <p className="text-brand-caption text-[color:var(--dash-faint)]">{hint}</p>
+      ) : suggestion ? (
+        <p className="text-brand-caption text-[color:var(--dash-muted)]">{suggestion}</p>
       ) : null}
     </label>
   );
@@ -328,14 +321,19 @@ export function IntakeWizard({
   const pregnancyApplies = isPregnancyApplicable(answers.sex, answers.age);
   const ageYears = parseIntakeAge(answers.age);
   const metricErrors = validateSnapshotMetrics(answers);
-  const heightRange = heightRangeForAge(ageYears);
-  const weightRange = weightRangeForAge(ageYears);
+  const metricSuggestions = suggestSnapshotMetrics(answers);
 
   const metricFieldError = (key: keyof typeof metricErrors) => {
     const filled = answers[key] !== "" && answers[key] != null;
     if (filled && metricErrors[key]) return metricErrors[key];
     if (validationError && step === 1 && metricErrors[key]) return metricErrors[key];
     return undefined;
+  };
+
+  const metricFieldSuggestion = (key: keyof typeof metricSuggestions) => {
+    if (metricFieldError(key)) return undefined;
+    const filled = answers[key] !== "" && answers[key] != null;
+    return filled ? metricSuggestions[key] : undefined;
   };
 
   const validateStep = () => {
@@ -362,41 +360,6 @@ export function IntakeWizard({
   };
 
   const isStepValid = validateStep();
-
-  const stepProgress = useMemo(() => {
-    if (step === 0) {
-      return { done: answers.consent === true ? 1 : 0, total: 1, label: "Confirm consent" };
-    }
-    if (step === 1) {
-      const keys = ["age", "sex", "pregnancy", "height_cm", "weight_kg", "activity"];
-      const sanitized = sanitizeIntakeAnswers(answers);
-      const done = keys.filter((key) => sanitized[key] !== "" && sanitized[key] != null).length;
-      return { done, total: keys.length, label: "Snapshot fields" };
-    }
-    if (step === 2) {
-      const keys = ["cancer", "mtc_men2", "peptide_allergy", "conditions", "medications"];
-      const done = keys.filter((key) => {
-        if (key === "conditions") {
-          return Array.isArray(answers.conditions) && answers.conditions.length > 0;
-        }
-        return Boolean(answers[key]);
-      }).length;
-      return { done, total: keys.length, label: "Safety answers" };
-    }
-    if (step === 3) {
-      return {
-        done: answers.primary_goal ? 1 : 0,
-        total: 1,
-        label: "Primary goal",
-      };
-    }
-    if (step === 6) {
-      const keys = ["injection_tolerance", "complexity", "timeline"];
-      const done = keys.filter((key) => Boolean(answers[key])).length;
-      return { done, total: keys.length, label: "Preferences" };
-    }
-    return null;
-  }, [answers, step]);
 
   const validationMessageForStep = () => {
     if (step === 0) return "Please confirm consent before continuing.";
@@ -452,7 +415,6 @@ export function IntakeWizard({
     }
 
     const value = answers[question.id];
-    const required = question.required ? " *" : "";
     let options = normalizeOptions(question.options);
 
     if (question.id === "activity" && ageYears != null && ageYears < CHILD_MAX_AGE) {
@@ -505,7 +467,7 @@ export function IntakeWizard({
           <p className="text-brand-caption -mt-1 text-[color:var(--dash-faint)]">
             Tap all that apply. Choosing “None” clears other selections.
           </p>
-          <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-2 @min-[28rem]:grid-cols-2">
             {visibleOptions.map((option) => {
               const checked = selected.includes(option.value);
               return (
@@ -532,10 +494,7 @@ export function IntakeWizard({
     if (question.type === "textarea") {
       return (
         <label key={question.id} className="adviser-intake-field grid min-w-0 gap-2">
-          <span className={authLabelClass}>
-            {question.text}
-            {required}
-          </span>
+          <span className={authLabelClass}>{question.text}</span>
           {question.id === "medications" ? (
             <p className="text-brand-caption -mt-0.5 text-[color:var(--dash-faint)]">
               Write None if the patient is not taking anything.
@@ -550,7 +509,7 @@ export function IntakeWizard({
                 ? "e.g. metformin, vitamin D — or None"
                 : "Type a short note…"
             }
-            className={cn(authFieldClass, "adviser-field min-h-[5.5rem] resize-y px-4")}
+            className={cn(authFieldClass, "adviser-field min-h-[5.5rem] resize-y px-3.5 text-sm")}
           />
         </label>
       );
@@ -568,24 +527,7 @@ export function IntakeWizard({
           value={value === undefined || value === null ? "" : String(value)}
           onChange={(next) => updateAnswer(question.id, next)}
           maxDigits={isAge || isHeight || isWeight ? METRIC_MAX_DIGITS : 4}
-          maxValue={
-            isAge
-              ? AGE_MAX
-              : isHeight
-                ? heightRange.max
-                : isWeight
-                  ? weightRange.max
-                  : question.max
-          }
-          hint={
-            isAge
-              ? `${AGE_MIN}–${AGE_MAX} years`
-              : isHeight
-                ? `Typical for this age: ${heightRange.min}–${heightRange.max} cm`
-                : isWeight
-                  ? `Typical for this age: ${weightRange.min}–${weightRange.max} kg`
-                  : undefined
-          }
+          maxValue={isAge ? AGE_MAX : isHeight || isWeight ? 999 : question.max}
           error={
             isAge
               ? metricFieldError("age")
@@ -595,16 +537,20 @@ export function IntakeWizard({
                   ? metricFieldError("weight_kg")
                   : undefined
           }
+          suggestion={
+            isHeight
+              ? metricFieldSuggestion("height_cm")
+              : isWeight
+                ? metricFieldSuggestion("weight_kg")
+                : undefined
+          }
         />
       );
     }
 
     return (
       <label key={question.id} className="adviser-intake-field grid min-w-0 self-start gap-2">
-        <span className={authLabelClass}>
-          {question.text}
-          {required}
-        </span>
+        <span className={authLabelClass}>{question.text}</span>
         <input
           type="text"
           value={String(value ?? "")}
@@ -616,7 +562,7 @@ export function IntakeWizard({
           onChange={(event) => updateAnswer(question.id, event.target.value)}
           className={cn(
             authFieldClass,
-            "adviser-field min-h-11 px-4 sm:min-h-12",
+            "adviser-field h-10 min-h-10 px-3.5 text-sm",
             question.id === "allergy_detail" && "sm:max-w-md",
           )}
         />
@@ -640,99 +586,100 @@ export function IntakeWizard({
         className={cn(
           "adviser-intake-nav flex flex-col gap-2",
           bare
-            ? "shrink-0 border-t border-[color:var(--dash-surface-border)] pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2.5"
-            : "mt-5 sm:mt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2.5",
+            ? "shrink-0 border-0 pt-4 @min-[22rem]:flex-row @min-[22rem]:items-center @min-[22rem]:justify-between @min-[22rem]:gap-2.5"
+            : "mt-5 @min-[22rem]:mt-6 @min-[22rem]:flex-row @min-[22rem]:flex-wrap @min-[22rem]:items-center @min-[22rem]:justify-between @min-[22rem]:gap-2.5",
         )}
       >
         <button
           type="button"
           onClick={handleBack}
-          className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] sm:w-auto"
+          className="dashboard-navy-btn lecture-page-action font-sans inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-white @min-[22rem]:w-auto"
         >
           <SidebarSvgIcon name="previous" size={14} strokeWidth={2.2} />
           Back
         </button>
-        <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:items-end">
-          {!isStepValid ? (
-            <p className="text-brand-caption text-pretty text-center text-[color:var(--dash-faint)] sm:text-right">
-              {validationMessageForStep().replace("Please ", "").replace(/\.$/, "")}
-            </p>
-          ) : (
-            <p className="text-brand-caption hidden text-center text-[color:var(--dash-muted)] sm:block sm:text-right">
-              Looking good — continue when ready
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={!isStepValid}
-            className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto"
-          >
-            {step === 6 ? (
-              <>
-                <span className="sm:hidden">Generate</span>
-                <span className="hidden sm:inline">Generate recommendation</span>
-              </>
-            ) : (
-              "Continue"
-            )}
-            {step < 6 ? <SidebarSvgIcon name="next" size={14} strokeWidth={2.2} /> : null}
-          </button>
-        </div>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleNext}
+          disabled={!isStepValid}
+          className="lecture-page-action h-10 min-h-10 w-full overflow-hidden px-5 text-sm @min-[22rem]:w-auto @min-[22rem]:min-w-[10rem]"
+        >
+          {step === 6 ? "Save intake" : "Continue"}
+          {step < 6 ? <SidebarSvgIcon name="next" size={14} strokeWidth={2.2} /> : null}
+        </Button>
       </div>
     ) : null;
 
   const body = (
     <>
       <div key={step} className={cn("adviser-intake-step space-y-4", bare && "adviser-intake-step--bare")}>
-        {stepProgress ? (
-          <div className="adviser-intake-step-meta flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] px-3 py-2.5">
-            <p className="text-brand-caption text-[color:var(--dash-muted)]">
-              {stepProgress.label}
-            </p>
-            <p className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
-              {stepProgress.done}/{stepProgress.total}
-              {isStepValid ? (
-              <span className="ml-2 inline-flex items-center gap-1 text-[color:var(--dash-navy)]">
-                  <SidebarSvgIcon name="check" size={12} strokeWidth={2.6} />
-                  Ready
-                </span>
-              ) : null}
-            </p>
-          </div>
-        ) : null}
-
         {step === 0 ? (
           <div className="space-y-4">
-            <StageBlock
-              badge="Stage 1 · Start here"
-              title="Consent & framing"
-              description="Quick confirmation, then we’ll walk through the patient details one step at a time."
-            >
-              <div className="text-brand-body rounded-lg border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] p-4 leading-relaxed text-[color:var(--dash-muted)]">
+            <StageBlock>
+              <p className="adviser-consent-copy font-sans text-sm leading-7 text-[#142644] sm:text-[0.9375rem] sm:leading-7">
                 {flow.consent.text}
-              </div>
-              <button
-                type="button"
-                onClick={handleConsentContinue}
-                className="dashboard-navy-btn font-sans flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold text-white"
+              </p>
+              <label
+                className={cn(
+                  "adviser-consent-check flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition",
+                  answers.consent === true
+                    ? "is-checked border-[rgba(20,38,68,0.28)] bg-[rgba(20,38,68,0.04)]"
+                    : "border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] hover:border-[color:var(--dash-dim)]",
+                )}
               >
-                <SidebarSvgIcon name="check" size={16} strokeWidth={2.4} />
+                <input
+                  type="checkbox"
+                  checked={answers.consent === true}
+                  onChange={(event) => updateAnswer("consent", event.target.checked)}
+                  className="sr-only"
+                />
+                <span
+                  className={cn(
+                    "adviser-consent-tick mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[0.35rem] border-2",
+                    answers.consent === true
+                      ? "border-[#142644] bg-[#142644]"
+                      : "border-[rgba(21,39,68,0.34)] bg-white",
+                  )}
+                  style={{ color: answers.consent === true ? "#ffffff" : "transparent" }}
+                  aria-hidden
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5.5 12.5 10 17l8.5-10" />
+                  </svg>
+                </span>
+                <span className="font-sans text-sm leading-5 text-[color:var(--dash-text)]">
+                  I confirm I am a licensed provider and agree to continue.
+                </span>
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                disabled={answers.consent !== true}
+                onClick={handleConsentContinue}
+                className="lecture-page-action h-10 min-h-10 w-full overflow-hidden px-5 text-sm"
+              >
                 {flow.consent.confirm_label}
-              </button>
+              </Button>
             </StageBlock>
           </div>
         ) : null}
 
         {step === 1 && snapshotStage ? (
-          <StageBlock
-            badge="Stage 2"
-            title={snapshotStage.title}
-            description="Enter age, height, and weight. Use the menus for sex and activity."
-          >
+          <StageBlock title={snapshotStage.title}>
             <div className="space-y-5">
               {snapshotNumberQuestions.length > 0 ? (
-                <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
+                <div className="grid grid-cols-1 items-start gap-4 @min-[28rem]:grid-cols-2">
                   {snapshotNumberQuestions.map((question) => renderQuestion(question))}
                 </div>
               ) : null}
@@ -746,11 +693,7 @@ export function IntakeWizard({
         ) : null}
 
         {step === 2 && safetyStage ? (
-          <StageBlock
-            badge="Stage 3 · Safety gate"
-            title="Safety gate"
-            description="Flag anything that would rule out peptides, then note conditions and medications."
-          >
+          <StageBlock title="Safety">
             <div className="space-y-6">
               <div className="space-y-4">
                 <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
@@ -773,28 +716,15 @@ export function IntakeWizard({
         ) : null}
 
         {step === 3 && goalStage ? (
-          <StageBlock
-            badge="Stage 4"
-            title="Goal selection"
-            description="Pick the main goal. A second goal is optional and can refine a stack."
-          >
+          <StageBlock title="Goal">
             <div className="grid items-start gap-5">
               {goalStage.questions?.map((question) => renderQuestion(question))}
-              {answers.primary_goal && branchLabel ? (
-                <p className="text-brand-caption text-[color:var(--dash-muted)]">
-                  Next: a short deep dive for {branchLabel.toLowerCase()}.
-                </p>
-              ) : null}
             </div>
           </StageBlock>
         ) : null}
 
         {step === 4 ? (
-          <StageBlock
-            badge={`Stage 5 · ${String(answers.primary_goal ?? "")}`}
-            title="Clinical deep dive"
-            description={branchLabel ?? "Goal-specific questions"}
-          >
+          <StageBlock title={branchLabel ?? "Clinical deep dive"}>
             <div className="grid items-start gap-5">
               {branchQuestions.map((question) => renderQuestion(question))}
             </div>
@@ -802,11 +732,7 @@ export function IntakeWizard({
         ) : null}
 
         {step === 5 && historyStage ? (
-          <StageBlock
-            badge="Stage 6"
-            title={historyStage.title}
-            description="Optional notes — skip anything you don’t have on file."
-          >
+          <StageBlock title={historyStage.title}>
             <div className="grid items-start gap-5">
               {historyStage.questions?.map((question) => renderQuestion(question))}
             </div>
@@ -814,11 +740,7 @@ export function IntakeWizard({
         ) : null}
 
         {step === 6 && preferencesStage ? (
-          <StageBlock
-            badge="Stage 7 · Almost done"
-            title={preferencesStage.title}
-            description="Three quick preferences, then we generate the recommendation."
-          >
+          <StageBlock title={preferencesStage.title}>
             <div className="grid items-start gap-5">
               {preferencesStage.questions?.map((question) => renderQuestion(question))}
             </div>
@@ -836,8 +758,8 @@ export function IntakeWizard({
 
   if (bare) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5">
+      <div className="@container flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pr-0.5">
           {body}
         </div>
         {nav}
@@ -846,7 +768,7 @@ export function IntakeWizard({
   }
 
   return (
-    <div className="dashboard-surface rounded-2xl p-5 md:p-6">
+    <div className="@container dashboard-surface min-w-0 rounded-2xl p-5 md:p-6">
       {body}
       {nav}
     </div>
@@ -854,32 +776,12 @@ export function IntakeWizard({
 }
 
 function StageBlock({
-  badge,
-  title,
-  description,
   children,
 }: {
-  badge: string;
-  title: string;
-  description?: string;
+  title?: string;
   children: React.ReactNode;
 }) {
-  return (
-    <div className="space-y-4">
-      <div className="adviser-intake-step-header">
-        <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
-          {badge}
-        </p>
-        <h2 className="font-sans mt-1 text-pretty text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg md:text-xl">
-          {title}
-        </h2>
-        {description ? (
-          <p className="text-brand-body mt-1 text-[color:var(--dash-muted)]">{description}</p>
-        ) : null}
-      </div>
-      {children}
-    </div>
-  );
+  return <div className="space-y-4">{children}</div>;
 }
 
 export function IntakeStageList({

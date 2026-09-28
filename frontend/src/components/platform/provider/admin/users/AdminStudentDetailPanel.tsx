@@ -5,6 +5,8 @@ import type { StudentSummary } from "@/lib/integrate/provider/admin/users/types"
 import {
   formatDate,
   formatMoney,
+  orderKindLabel,
+  orderPlanName,
   planLabels,
   type Order,
   type PlanType,
@@ -29,6 +31,14 @@ function membershipLabel(status?: string | null) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function statusLabel(status: string) {
+  if (status === "paid") return "Paid";
+  if (status === "pending") return "Pending";
+  if (status === "failed") return "Failed";
+  if (status === "refunded") return "Refunded";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 function affiliateName(student: StudentSummary) {
   if (student.affiliate) {
     return personName(student.affiliate.first_name, student.affiliate.last_name, "Affiliate");
@@ -45,6 +55,7 @@ export function AdminStudentDetailPanel({
   ordersTotal = 0,
   ordersHasNext = false,
   ordersHasPrevious = false,
+  ordersPageSize = 8,
   onOrdersPrevious,
   onOrdersNext,
   showAffiliate = true,
@@ -58,6 +69,7 @@ export function AdminStudentDetailPanel({
   ordersTotal?: number;
   ordersHasNext?: boolean;
   ordersHasPrevious?: boolean;
+  ordersPageSize?: number;
   onOrdersPrevious?: () => void;
   onOrdersNext?: () => void;
   showAffiliate?: boolean;
@@ -158,32 +170,48 @@ export function AdminStudentDetailPanel({
               <li
                 key={order.order_id}
                 className={cn(
-                  "flex min-w-0 items-center justify-between gap-3 rounded-2xl px-3.5 py-3.5",
+                  "min-w-0 rounded-2xl px-4 py-4",
                   highlightOrderId && highlightOrderId === order.order_id
                     ? "bg-[color:var(--dash-accent-soft,var(--dash-soft))] ring-2 ring-[color:var(--dash-accent)]"
-                    : "bg-[color:var(--dash-soft)]",
+                    : "bg-[color:var(--dash-soft)]/80",
                 )}
               >
-                <div className="min-w-0">
-                  <p className="font-sans truncate text-sm font-semibold text-[color:var(--dash-text)]">
-                    {planLabel(order.plan_type)}
-                  </p>
-                  <p className="text-brand-caption text-[color:var(--dash-faint)]">
-                    {formatDate(order.created_at)} · {order.status}
-                  </p>
-                </div>
-                <span className="font-sans shrink-0 text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
-                  {formatMoney(order.amount, order.currency || spendCurrency)}
-                </span>
+                <p className="font-sans truncate text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                  #{order.order_id.slice(0, 10)}
+                </p>
+                <p className="text-brand-caption mt-1 text-[color:var(--dash-muted)]">
+                  {orderPlanName(order)} · {orderKindLabel(order)}
+                </p>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-brand-caption">
+                  <div>
+                    <dt className="text-[color:var(--dash-faint)]">Status</dt>
+                    <dd className="mt-0.5 font-semibold text-[color:var(--dash-text)]">
+                      {statusLabel(order.status)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[color:var(--dash-faint)]">Amount</dt>
+                    <dd className="mt-0.5 font-semibold text-[color:var(--dash-amount)]">
+                      {formatMoney(order.amount, order.currency || spendCurrency)}
+                    </dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-[color:var(--dash-faint)]">Date</dt>
+                    <dd className="mt-0.5 font-medium text-[color:var(--dash-muted)]">
+                      {formatDate(order.created_at)}
+                    </dd>
+                  </div>
+                </dl>
               </li>
             ))}
           </ul>
         )}
-        {onOrdersPrevious && onOrdersNext && (ordersHasNext || ordersHasPrevious || ordersTotal > orders.length) ? (
+        {onOrdersPrevious && onOrdersNext && (ordersHasNext || ordersHasPrevious) ? (
           <PaginationControls
-            compact
+            appearance="lecture"
             page={ordersPage}
             total={ordersTotal}
+            pageCount={Math.max(1, Math.ceil(ordersTotal / ordersPageSize))}
             hasNext={ordersHasNext}
             hasPrevious={ordersHasPrevious}
             loading={ordersLoading}

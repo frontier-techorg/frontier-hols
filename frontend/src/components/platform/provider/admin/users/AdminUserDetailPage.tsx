@@ -8,6 +8,9 @@ import { Icon, Menu } from "@/components/icons";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
 import { adminNav } from "@/components/platform/provider/admin/adminNav";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
+import { PaginationControls } from "@/components/platform/provider/admin/shared";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
+import { Button } from "@/components/ui/Button";
 import { ApiRequestError } from "@/lib/integrate/client";
 import type { UserRole } from "@/lib/integrate/auth/types";
 import {
@@ -30,6 +33,8 @@ import {
 import {
   formatDate,
   formatMoney,
+  orderKindLabel,
+  orderPlanName,
   planLabels,
   type Order,
   type PlanType,
@@ -39,6 +44,16 @@ import { cn } from "@/lib/utils";
 type AdminUserDetailPageProps = {
   userId: string;
 };
+
+const ORDERS_PAGE_SIZE = 8;
+
+function orderStatusLabel(status: string) {
+  if (status === "paid") return "Paid";
+  if (status === "pending") return "Pending";
+  if (status === "failed") return "Failed";
+  if (status === "refunded") return "Refunded";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 type FormState = {
   first_name: string;
@@ -158,7 +173,14 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
 
   useEffect(() => {
     if (!focusOrder) return;
-    const node = document.getElementById(`admin-order-${focusOrder}`);
+    const nodes = Array.from(
+      document.querySelectorAll(`[data-order-id="${CSS.escape(focusOrder)}"]`),
+    );
+    const node =
+      nodes.find((el) => {
+        const box = el.getBoundingClientRect();
+        return box.width > 0 && box.height > 0;
+      }) ?? nodes[0];
     node?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [focusOrder, orders]);
 
@@ -170,7 +192,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       try {
         const [commerceData, orderData] = await Promise.all([
           getStudentCommerce(userId),
-          listStudentOrders(userId, { page: pageNum, limit: 8 }),
+          listStudentOrders(userId, { page: pageNum, limit: ORDERS_PAGE_SIZE }),
         ]);
         setCommerce(commerceData);
         setOrders(orderData.items);
@@ -305,7 +327,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
       brandBackdrop
       nav={adminNav}
     >
-      <div className="dashboard-screen profile-page min-w-0 overflow-x-hidden">
+      <div className="dashboard-screen profile-page orders-page min-w-0 overflow-x-hidden">
         <header className="mb-4 flex min-h-10 min-w-0 items-center gap-2 sm:mb-5 sm:min-h-12 sm:gap-3 md:gap-4">
           <button
             type="button"
@@ -318,9 +340,9 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
           <Link
             href={backHref}
             aria-label={backLabelFull}
-            className="adviser-chat-back-btn dashboard-navy-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full no-underline sm:h-12 sm:w-12"
+            className="lecture-back-btn flex h-10 w-8 shrink-0 items-center justify-center rounded-full no-underline"
           >
-            <SidebarSvgIcon name="previous" size={18} strokeWidth={2.4} />
+            <SidebarSvgIcon name="back" size={32} className="lecture-back-mark" />
           </Link>
           <h1 className="font-sans min-w-0 flex-1 truncate text-lg font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
             User profile
@@ -374,7 +396,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
 
                   <Link
                     href={backHref}
-                    className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] transition sm:min-h-10 sm:w-auto lg:shrink-0"
+                    className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] sm:w-auto lg:shrink-0"
                   >
                     <span className="sm:hidden">{backLabelShort}</span>
                     <span className="hidden sm:inline">{backLabelFull}</span>
@@ -489,23 +511,23 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                       ) : null}
 
                       {canEdit("role") ? (
-                        <div className="grid min-w-0 gap-2">
-                          <label htmlFor="role" className="dashboard-field-label">
-                            Role
-                          </label>
-                          <select
-                            id="role"
-                            value={form.role}
-                            onChange={(e) =>
-                              setForm((prev) => ({ ...prev, role: e.target.value as UserRole }))
-                            }
-                            className={cn("dashboard-field", "dashboard-field-select")}
-                          >
-                            <option value="student">Student</option>
-                            <option value="affiliate">Affiliate</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
+                        <ProfileSelect
+                          id="role"
+                          label="Role"
+                          value={form.role}
+                          onChange={(value) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              role:
+                                value === "affiliate" || value === "admin" ? value : "student",
+                            }))
+                          }
+                          options={[
+                            { value: "student", label: "Student" },
+                            { value: "affiliate", label: "Affiliate" },
+                            { value: "admin", label: "Admin" },
+                          ]}
+                        />
                       ) : null}
 
                       {canEdit("marketing_pref") ? (
@@ -529,18 +551,18 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                       <div className="mt-1 flex flex-col-reverse gap-2 border-t border-[color:var(--dash-surface-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
                         <Link
                           href={backHref}
-                          className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] transition sm:w-auto"
+                          className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] sm:w-auto"
                         >
                           <span className="sm:hidden">{backLabelShort}</span>
                           <span className="hidden sm:inline">{backLabelFull}</span>
                         </Link>
-                        <button
+                        <Button
                           type="submit"
                           disabled={saving}
-                          className="font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#DDE466] px-6 text-sm font-medium text-[#152744] transition hover:brightness-105 disabled:pointer-events-none disabled:opacity-60 sm:w-auto sm:min-w-[10rem]"
+                          className="lecture-page-action w-full px-5 sm:w-auto"
                         >
                           {saving ? "Saving…" : "Save changes"}
-                        </button>
+                        </Button>
                       </div>
                     </form>
                   </section>
@@ -572,7 +594,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                         type="button"
                         disabled={exporting || moneyLoading}
                         onClick={() => void handleExportPayments()}
-                        className="dashboard-pill-soft font-sans inline-flex min-h-11 items-center justify-center rounded-full px-3.5 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-55 sm:min-h-10"
+                        className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-55"
                       >
                         {exporting ? "Exporting…" : "Export Excel"}
                       </button>
@@ -610,7 +632,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                     />
                   </div>
 
-                  <div className="mt-5 space-y-2.5">
+                  <div className="mt-5">
                     {ordersLoading && orders.length === 0 ? (
                       <p className="text-brand-body py-6 text-center text-[color:var(--dash-faint)]">
                         Loading orders…
@@ -620,58 +642,136 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                         No purchases on this account yet.
                       </p>
                     ) : (
-                      orders.map((order) => (
-                        <article
-                          id={`admin-order-${order.order_id}`}
-                          key={order.order_id}
-                          className={cn(
-                            "rounded-xl border bg-[color:var(--dash-soft)]/40 px-3.5 py-3 sm:px-4",
-                            focusOrder === order.order_id
-                              ? "border-[color:var(--dash-accent)] ring-2 ring-[color:var(--dash-accent)]"
-                              : "border-[color:var(--dash-surface-border)]",
-                          )}
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-sans text-sm font-semibold text-[color:var(--dash-text)]">
-                                {planLabels[order.plan_type] ?? order.plan_type}
+                      <>
+                        <ul className="grid gap-2.5 md:hidden">
+                          {orders.map((order) => (
+                            <li
+                              data-order-id={order.order_id}
+                              key={order.order_id}
+                              className={cn(
+                                "min-w-0 rounded-2xl px-4 py-4",
+                                focusOrder === order.order_id
+                                  ? "bg-[color:var(--dash-accent-soft,var(--dash-soft))] ring-2 ring-[color:var(--dash-accent)]"
+                                  : "bg-[color:var(--dash-soft)]/80",
+                              )}
+                            >
+                              <p className="font-sans truncate text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                #{order.order_id.slice(0, 10)}
                               </p>
-                              <p className="text-brand-caption mt-0.5 text-[color:var(--dash-faint)]">
-                                {order.created_at ? formatDate(order.created_at) : "—"}
-                                {" · "}
-                                <span className="capitalize">{order.status}</span>
+                              <p className="text-brand-caption mt-1 text-[color:var(--dash-muted)]">
+                                {orderPlanName(order)} · {orderKindLabel(order)}
                               </p>
-                            </div>
-                            <p className="font-sans text-sm font-semibold text-[color:var(--dash-accent)]">
-                              {formatMoney(order.amount, order.currency)}
-                            </p>
-                          </div>
-                        </article>
-                      ))
+                              <dl className="mt-3 grid grid-cols-2 gap-2 text-brand-caption">
+                                <div>
+                                  <dt className="text-[color:var(--dash-faint)]">Status</dt>
+                                  <dd className="mt-0.5 font-semibold text-[color:var(--dash-text)]">
+                                    {orderStatusLabel(order.status)}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-[color:var(--dash-faint)]">Amount</dt>
+                                  <dd className="mt-0.5 font-semibold text-[color:var(--dash-amount)]">
+                                    {formatMoney(order.amount, order.currency)}
+                                  </dd>
+                                </div>
+                                <div className="col-span-2">
+                                  <dt className="text-[color:var(--dash-faint)]">Date</dt>
+                                  <dd className="mt-0.5 font-medium text-[color:var(--dash-muted)]">
+                                    {formatDate(order.created_at)}
+                                  </dd>
+                                </div>
+                              </dl>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="hidden min-w-0 overflow-x-auto md:block">
+                          <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-left">
+                            <thead>
+                              <tr className="bg-[color:var(--dash-soft)] text-brand-caption font-semibold uppercase tracking-[0.06em] text-[color:var(--dash-faint)]">
+                                <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                                  Order ID
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Plan
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Type
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Status
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Amount
+                                </th>
+                                <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                                  Date
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {orders.map((order) => (
+                                <tr
+                                  data-order-id={order.order_id}
+                                  key={order.order_id}
+                                  className={cn(
+                                    "orders-table-row outline-none transition",
+                                    focusOrder === order.order_id
+                                      ? "bg-[color:var(--dash-accent-soft,var(--dash-soft))]"
+                                      : "hover:bg-[color:var(--dash-soft)]",
+                                  )}
+                                >
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                      #{order.order_id.slice(0, 10)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="font-sans text-sm font-semibold text-[color:var(--dash-text)]">
+                                      {orderPlanName(order)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="text-brand-caption font-medium text-[color:var(--dash-muted)]">
+                                      {orderKindLabel(order)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="text-brand-caption inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
+                                      {orderStatusLabel(order.status)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
+                                      {formatMoney(order.amount, order.currency)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                                    <span className="text-brand-caption whitespace-nowrap text-[color:var(--dash-muted)]">
+                                      {formatDate(order.created_at)}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  {ordersTotal > 8 ? (
-                    <div className="mt-4 flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        disabled={ordersPage <= 1 || ordersLoading}
-                        onClick={() => void loadStudentMoney(ordersPage - 1)}
-                        className="dashboard-pill-soft font-sans inline-flex min-h-10 items-center justify-center rounded-full px-4 text-sm font-medium disabled:opacity-50"
-                      >
-                        Previous
-                      </button>
-                      <span className="text-brand-caption text-[color:var(--dash-faint)]">
-                        Page {ordersPage}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={!ordersHasNext || ordersLoading}
-                        onClick={() => void loadStudentMoney(ordersPage + 1)}
-                        className="dashboard-pill-soft font-sans inline-flex min-h-10 items-center justify-center rounded-full px-4 text-sm font-medium disabled:opacity-50"
-                      >
-                        Next
-                      </button>
+                  {(ordersHasNext || ordersPage > 1) ? (
+                    <div className="mt-4">
+                      <PaginationControls
+                        appearance="lecture"
+                        page={ordersPage}
+                        total={ordersTotal}
+                        pageCount={Math.max(1, Math.ceil(ordersTotal / ORDERS_PAGE_SIZE))}
+                        hasNext={ordersHasNext}
+                        hasPrevious={ordersPage > 1}
+                        loading={ordersLoading}
+                        onPrevious={() => void loadStudentMoney(ordersPage - 1)}
+                        onNext={() => void loadStudentMoney(ordersPage + 1)}
+                      />
                     </div>
                   ) : null}
                 </section>
@@ -698,7 +798,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                         type="button"
                         disabled={exporting || moneyLoading}
                         onClick={() => void handleExportPayments()}
-                        className="dashboard-pill-soft font-sans inline-flex min-h-11 items-center justify-center rounded-full px-3.5 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-55 sm:min-h-10"
+                        className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-55"
                       >
                         {exporting ? "Exporting…" : "Export Excel"}
                       </button>
@@ -736,7 +836,7 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                     />
                   </div>
 
-                  <div className="mt-5 space-y-2.5">
+                  <div className="mt-5">
                     {moneyLoading && !earnings ? (
                       <p className="text-brand-body py-6 text-center text-[color:var(--dash-faint)]">
                         Loading earnings…
@@ -746,41 +846,143 @@ export function AdminUserDetailPage({ userId }: AdminUserDetailPageProps) {
                         No commissionable orders yet.
                       </p>
                     ) : (
-                      earnings.items.map((item) => (
-                        <article
-                          key={item.order_id}
-                          className="rounded-xl border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)]/40 px-3.5 py-3 sm:px-4"
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-sans text-sm font-semibold text-[color:var(--dash-text)]">
+                      <>
+                        <ul className="grid gap-2.5 md:hidden">
+                          {earnings.items.map((item) => (
+                            <li
+                              key={item.order_id}
+                              className="min-w-0 rounded-2xl bg-[color:var(--dash-soft)]/80 px-4 py-4"
+                            >
+                              <p className="font-sans truncate text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                #{item.order_id.slice(0, 10)}
+                              </p>
+                              <p className="text-brand-caption mt-1 text-[color:var(--dash-muted)]">
                                 {item.plan_type
                                   ? planLabels[item.plan_type as PlanType] ?? item.plan_type
                                   : "Order"}
                               </p>
-                              <p className="text-brand-caption mt-0.5 text-[color:var(--dash-faint)]">
-                                {item.created_at ? formatDate(item.created_at) : "—"}
-                                {" · "}
-                                Order {formatMoney(item.amount, item.currency)}
+                              <dl className="mt-3 grid grid-cols-2 gap-2 text-brand-caption">
+                                <div>
+                                  <dt className="text-[color:var(--dash-faint)]">Status</dt>
+                                  <dd className="mt-0.5 font-semibold text-[color:var(--dash-text)]">
+                                    {orderStatusLabel(item.status)}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-[color:var(--dash-faint)]">Commission</dt>
+                                  <dd className="mt-0.5 font-semibold text-[color:var(--dash-amount)]">
+                                    +{formatMoney(item.commission, item.currency)}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-[color:var(--dash-faint)]">Order</dt>
+                                  <dd className="mt-0.5 font-medium text-[color:var(--dash-muted)]">
+                                    {formatMoney(item.amount, item.currency)}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt className="text-[color:var(--dash-faint)]">Date</dt>
+                                  <dd className="mt-0.5 font-medium text-[color:var(--dash-muted)]">
+                                    {formatDate(item.created_at)}
+                                  </dd>
+                                </div>
                                 {item.student_user_id ? (
-                                  <>
-                                    {" · "}
+                                  <div className="col-span-2 flex items-end">
                                     <Link
                                       href={`/admin/users/${encodeURIComponent(item.student_user_id)}`}
-                                      className="underline-offset-2 hover:underline"
+                                      className="portal-action-link"
                                     >
                                       Student
                                     </Link>
-                                  </>
+                                  </div>
                                 ) : null}
-                              </p>
-                            </div>
-                            <p className="font-sans text-sm font-semibold text-[color:var(--dash-accent)]">
-                              +{formatMoney(item.commission, item.currency)}
-                            </p>
-                          </div>
-                        </article>
-                      ))
+                              </dl>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="hidden min-w-0 overflow-x-auto md:block">
+                          <table className="w-full min-w-[52rem] border-separate border-spacing-0 text-left">
+                            <thead>
+                              <tr className="bg-[color:var(--dash-soft)] text-brand-caption font-semibold uppercase tracking-[0.06em] text-[color:var(--dash-faint)]">
+                                <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                                  Order ID
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Plan
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Status
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Order
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Commission
+                                </th>
+                                <th scope="col" className="px-3 py-3 font-semibold">
+                                  Date
+                                </th>
+                                <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                                  Action
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {earnings.items.map((item) => (
+                                <tr
+                                  key={item.order_id}
+                                  className="orders-table-row outline-none transition hover:bg-[color:var(--dash-soft)]"
+                                >
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                      #{item.order_id.slice(0, 10)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="font-sans text-sm font-semibold text-[color:var(--dash-text)]">
+                                      {item.plan_type
+                                        ? planLabels[item.plan_type as PlanType] ?? item.plan_type
+                                        : "Order"}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="text-brand-caption inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
+                                      {orderStatusLabel(item.status)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                                      {formatMoney(item.amount, item.currency)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
+                                      +{formatMoney(item.commission, item.currency)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                                    <span className="text-brand-caption whitespace-nowrap text-[color:var(--dash-muted)]">
+                                      {formatDate(item.created_at)}
+                                    </span>
+                                  </td>
+                                  <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                                    {item.student_user_id ? (
+                                      <Link
+                                        href={`/admin/users/${encodeURIComponent(item.student_user_id)}`}
+                                        className="portal-action-link"
+                                      >
+                                        Student
+                                      </Link>
+                                    ) : (
+                                      <span className="text-brand-caption text-[color:var(--dash-faint)]">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
                     )}
                   </div>
                 </section>

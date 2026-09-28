@@ -7,6 +7,8 @@ const ACCESS_TOKEN_EXPIRES_AT_KEY = "hols_access_token_expires_at";
 const LAST_REFRESH_AT_KEY = "hols_last_token_refresh_at";
 
 const LECTURE_CACHE_PREFIX = "lectures:";
+const ADVISER_PATIENT_KEY = "hols-adviser-patient-id";
+const ADVISER_CACHE_PREFIX = "hols-adviser-cache:";
 const PREFETCH_CACHE_PREFIX = "hols_prefetched_";
 const PAYMENT_CACHE_PREFIX = "student-payment:";
 const PROFILE_CACHE_PREFIX = "student-profile:";
@@ -52,7 +54,10 @@ export function clearAuthSession() {
         key.startsWith(PREFETCH_CACHE_PREFIX) ||
         key.startsWith(PAYMENT_CACHE_PREFIX) ||
         key.startsWith(PROFILE_CACHE_PREFIX) ||
-        key.startsWith(AFFILIATE_PROFILE_CACHE_PREFIX)
+        key.startsWith(AFFILIATE_PROFILE_CACHE_PREFIX) ||
+        key === ADVISER_PATIENT_KEY ||
+        key.startsWith(`${ADVISER_PATIENT_KEY}:`) ||
+        key.startsWith(ADVISER_CACHE_PREFIX)
       ) {
         window.sessionStorage.removeItem(key);
       }

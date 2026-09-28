@@ -493,22 +493,24 @@ def otp_is_required(last_login_at: Optional[str], role: str) -> bool:
     return elapsed >= settings.otp_required_after_seconds
 
 
+_OTP_EMAIL_ACTIONS = {
+    UserRole.ADMIN.value: "otp_verification_admin",
+    UserRole.AFFILIATE.value: "otp_verification_affiliate",
+    UserRole.STUDENT.value: "otp_verification_student",
+}
+
+
 async def send_otp_email(user: dict[str, Any], code: str) -> None:
-    """Send the OTP code email using the shared HTML template."""
+    """Send the role-specific OTP email. Each template includes a login button."""
     first_name = user.get("first_name") or "there"
     try:
-        role = user.get("role")
-        cta_path = "/login"
-        if role == UserRole.ADMIN.value:
-            cta_path = "/login/admin"
-        elif role == UserRole.AFFILIATE.value:
-            cta_path = "/login/affiliate"
+        role = user.get("role") or UserRole.STUDENT.value
+        action = _OTP_EMAIL_ACTIONS.get(role, "otp_verification_student")
         email = email_service.render_email(
-            "otp_verification",
+            action,
             recipient_name=first_name,
             otp_code=code,
             expiry_minutes=max(1, settings.otp_expire_seconds // 60),
-            cta_path=cta_path,
         )
         await email_service.send_email_async(
             to=user["email"],

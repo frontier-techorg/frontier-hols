@@ -120,6 +120,7 @@ async def increment_student_commerce(
     paid_at: str,
     membership_status: Optional[str] = None,
     membership_end_date: Optional[str] = None,
+    update_membership: bool = True,
 ) -> dict[str, Any]:
     """Add one paid order to the student profile and role index."""
     from services.routes.auth.service import user_role_index_item
@@ -127,27 +128,35 @@ async def increment_student_commerce(
     money = _as_decimal(round(float(amount or 0), 2))
     profit = _as_decimal(round(float(admin_earned or 0), 2))
 
+    set_expression = (
+        "SET spend_currency = :currency, last_purchase_at = :paid_at, "
+        "last_purchase_amount = :amt"
+    )
+    values: dict[str, Any] = {
+        ":amt": money,
+        ":profit": profit,
+        ":one": Decimal("1"),
+        ":currency": currency,
+        ":paid_at": paid_at,
+    }
+    if update_membership:
+        set_expression += (
+            ", last_plan_type = :plan, current_plan = :plan, "
+            "membership_status = :status, membership_end_date = :end_date"
+        )
+        values[":plan"] = plan_type
+        values[":status"] = membership_status or "active"
+        values[":end_date"] = membership_end_date or ""
+
     def _update():
         response = _table().update_item(
             Key={"PK": UserProfile.pk(user_id), "SK": UserProfile.sk()},
             UpdateExpression=(
                 "ADD total_spent :amt, admin_earned :profit, "
                 "order_count :one, paid_order_count :one "
-                "SET spend_currency = :currency, last_purchase_at = :paid_at, "
-                "last_purchase_amount = :amt, last_plan_type = :plan, "
-                "current_plan = :plan, membership_status = :status, "
-                "membership_end_date = :end_date"
+                + set_expression
             ),
-            ExpressionAttributeValues={
-                ":amt": money,
-                ":profit": profit,
-                ":one": Decimal("1"),
-                ":currency": currency,
-                ":paid_at": paid_at,
-                ":plan": plan_type,
-                ":status": membership_status or "active",
-                ":end_date": membership_end_date or "",
-            },
+            ExpressionAttributeValues=values,
             ReturnValues="ALL_NEW",
         )
         updated = response["Attributes"]

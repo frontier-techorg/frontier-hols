@@ -167,6 +167,7 @@ async def _increment_snapshot(
     referred: bool,
     currency: str,
     order_id: str,
+    include_plan_bucket: bool = True,
 ) -> None:
     plan_key = plan_type if plan_type in PLAN_TYPES else "monthly"
     values: dict[str, Any] = {
@@ -190,9 +191,14 @@ async def _increment_snapshot(
         "profit :profit",
         "affiliate_earnings :affiliate_earnings",
         "earnings :earnings",
-        f"plan_{plan_key}_count :one",
-        f"plan_{plan_key}_revenue :revenue",
     ]
+    if include_plan_bucket:
+        add_parts.extend(
+            [
+                f"plan_{plan_key}_count :one",
+                f"plan_{plan_key}_revenue :revenue",
+            ]
+        )
     if referred:
         add_parts.extend(["referred_count :one", "referred_revenue :revenue"])
         add_parts.extend(["direct_count :zero", "direct_revenue :zero"])
@@ -234,6 +240,7 @@ async def record_paid_sale(
     paid_at: datetime | str,
     affiliate_id: Optional[str],
     affiliate_commission: Optional[float | Decimal],
+    include_plan_bucket: bool = True,
 ) -> dict[str, float]:
     """Increment stored week/month/year/all-time sales on a successful payment."""
     if isinstance(paid_at, str):
@@ -259,6 +266,7 @@ async def record_paid_sale(
             referred=referred,
             currency=currency,
             order_id=order_id,
+            include_plan_bucket=include_plan_bucket,
         )
 
     if affiliate_id:
@@ -274,6 +282,7 @@ async def record_paid_sale(
                 referred=True,
                 currency=currency,
                 order_id=order_id,
+                include_plan_bucket=include_plan_bucket,
             )
 
     logger.info(

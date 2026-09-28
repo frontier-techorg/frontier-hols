@@ -6,7 +6,5 @@ export const studentNav: PortalNavItem[] = [
   { label: "Webinars", href: "/student/webinars", icon: portalIcons.webinars },
   { label: "Calculator", href: "/student/calculator", icon: portalIcons.calculator },
   { label: "Peptide Advisor", href: "/student/adviser", icon: portalIcons.adviser },
-  { label: "Payment", href: "/student/payment", icon: portalIcons.payment, exact: true },
-  { label: "Notifications", href: "/student/notifications", icon: portalIcons.notifications, badge: "unread" },
-  { label: "Settings", href: "/student/profile", icon: portalIcons.profile },
+  { label: "Profile", href: "/student/profile", icon: portalIcons.profile },
 ];

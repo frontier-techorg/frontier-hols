@@ -11,7 +11,6 @@ import { listCourses } from "@/lib/integrate/provider/student/lectures";
 import { prefetchAdviserBootstrap } from "@/lib/integrate/provider/student/chat/api";
 import { getStudentProfile } from "@/lib/integrate/provider/student/profile/api";
 import {
-  getCard,
   getCurrentMembership,
   listPlans as listStudentPlans,
   listOrders,
@@ -44,7 +43,6 @@ async function prefetchStudentData() {
     listOrders({ page: 1, limit: 1 }),
     listOrders({ page: 1, limit: 10 }),
     listStudentPlans(),
-    getCard(),
     // Static lecture catalog is session-cached, so refreshes reuse it without a network call.
     listCourses({ page: 1, limit: 12 }),
     // Peptide adviser bootstrap (patients + active chat history) preloads on portal login.

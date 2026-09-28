@@ -10,11 +10,14 @@ import {
 import {
   WEBINAR_STATUS_OPTIONS,
   isValidJoinUrl,
+  isWebinarStatus,
   normalizeJoinUrl,
   toLocalInputValue,
   type WebinarStatus,
 } from "@/components/platform/provider/admin/webinars/webinarForm";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
+import { Button } from "@/components/ui/Button";
 
 export type CreateWebinarFormValues = {
   title: string;
@@ -124,7 +127,7 @@ export function CreateWebinarDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="adviser-dialog-panel adviser-dialog-panel--center relative z-10 flex max-h-[min(88svh,52rem)] w-full max-w-3xl min-w-0 flex-col overflow-hidden rounded-2xl"
+        className="adviser-dialog-panel adviser-dialog-panel--center webinars-page relative z-10 flex max-h-[min(88svh,52rem)] w-full max-w-3xl min-w-0 flex-col overflow-hidden rounded-2xl"
         onSubmit={(event) => {
           event.preventDefault();
           if (!canSubmit || !coverFile) {
@@ -163,11 +166,10 @@ export function CreateWebinarDialog({
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
-            className="adviser-onboarding-close inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:h-12 sm:w-12"
+            className="adviser-onboarding-close inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50"
             aria-label="Close dialog"
           >
-            <SidebarSvgIcon name="cross" size={24} strokeWidth={2.2} className="sm:hidden" />
-            <SidebarSvgIcon name="cross" size={28} strokeWidth={2.15} className="hidden sm:block" />
+            <SidebarSvgIcon name="cross" size={22} strokeWidth={2.2} />
           </button>
         </div>
 
@@ -219,26 +221,19 @@ export function CreateWebinarDialog({
               ) : null}
             </div>
 
-            <label className="grid min-w-0 gap-2">
-              <span className="dashboard-field-label">Status</span>
-              <select
-                disabled={isSubmitting}
-                value={form.status}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    status: event.target.value as WebinarStatus,
-                  }))
-                }
-                className="dashboard-field dashboard-field-select"
-              >
-                {WEBINAR_STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ProfileSelect
+              id="create-webinar-status"
+              label="Status"
+              value={form.status}
+              disabled={isSubmitting}
+              portalToBody
+              menuZIndex={130}
+              onChange={(value) => {
+                if (!isWebinarStatus(value)) return;
+                setForm((prev) => ({ ...prev, status: value }));
+              }}
+              options={[...WEBINAR_STATUS_OPTIONS]}
+            />
           </div>
 
           <label className="grid min-w-0 gap-2">
@@ -328,14 +323,14 @@ export function CreateWebinarDialog({
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
-            className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 min-h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
           >
             Cancel
           </button>
-          <button
+          <Button
             type="submit"
             disabled={!canSubmit}
-            className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-semibold text-white disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action w-full px-5 sm:w-auto"
           >
             {isSubmitting ? (
               <>
@@ -348,7 +343,7 @@ export function CreateWebinarDialog({
                 Create webinar
               </>
             )}
-          </button>
+          </Button>
         </div>
       </form>
     </div>,

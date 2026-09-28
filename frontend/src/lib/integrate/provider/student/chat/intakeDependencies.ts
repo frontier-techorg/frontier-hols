@@ -61,6 +61,7 @@ export type SnapshotMetricErrors = {
   weight_kg?: string;
 };
 
+/** Hard blockers only — missing/invalid numbers. Range outliers are suggestions. */
 export function validateSnapshotMetrics(answers: IntakeAnswers): SnapshotMetricErrors {
   const errors: SnapshotMetricErrors = {};
   const age = parseIntakeAge(answers.age);
@@ -75,47 +76,73 @@ export function validateSnapshotMetrics(answers: IntakeAnswers): SnapshotMetricE
     errors.age = "Age must be between 1 and 100.";
   }
 
-  const heightRange = heightRangeForAge(age);
   if (answers.height_cm === "" || answers.height_cm == null) {
     errors.height_cm = "Enter height in cm.";
   } else if (height == null) {
     errors.height_cm = "Enter a valid height.";
   } else if (String(Math.trunc(height)).length > METRIC_MAX_DIGITS) {
     errors.height_cm = "Height can have at most 3 digits.";
-  } else if (height < heightRange.min || height > heightRange.max) {
-    errors.height_cm =
-      age != null
-        ? `For age ${age}, height should be ${heightRange.min}–${heightRange.max} cm.`
-        : `Height should be ${heightRange.min}–${heightRange.max} cm.`;
   }
 
-  const weightRange = weightRangeForAge(age);
   if (answers.weight_kg === "" || answers.weight_kg == null) {
     errors.weight_kg = "Enter weight in kg.";
   } else if (weight == null) {
     errors.weight_kg = "Enter a valid weight.";
   } else if (String(Math.trunc(weight)).length > METRIC_MAX_DIGITS) {
     errors.weight_kg = "Weight can have at most 3 digits.";
-  } else if (weight < weightRange.min || weight > weightRange.max) {
-    errors.weight_kg =
-      age != null
-        ? `For age ${age}, weight should be ${weightRange.min}–${weightRange.max} kg.`
-        : `Weight should be ${weightRange.min}–${weightRange.max} kg.`;
   }
 
-  if (!errors.height_cm && !errors.weight_kg && height != null && weight != null) {
+  return errors;
+}
+
+/** Soft guidance — does not block Continue. */
+export function suggestSnapshotMetrics(answers: IntakeAnswers): SnapshotMetricErrors {
+  const suggestions: SnapshotMetricErrors = {};
+  const age = parseIntakeAge(answers.age);
+  const height = parseIntakeNumber(answers.height_cm);
+  const weight = parseIntakeNumber(answers.weight_kg);
+  const hard = validateSnapshotMetrics(answers);
+
+  if (!hard.height_cm && height != null) {
+    const heightRange = heightRangeForAge(age);
+    if (height < heightRange.min || height > heightRange.max) {
+      suggestions.height_cm =
+        age != null
+          ? `For age ${age}, height should be ${heightRange.min}–${heightRange.max} cm.`
+          : `Height should be ${heightRange.min}–${heightRange.max} cm.`;
+    }
+  }
+
+  if (!hard.weight_kg && weight != null) {
+    const weightRange = weightRangeForAge(age);
+    if (weight < weightRange.min || weight > weightRange.max) {
+      suggestions.weight_kg =
+        age != null
+          ? `For age ${age}, weight should be ${weightRange.min}–${weightRange.max} kg.`
+          : `Weight should be ${weightRange.min}–${weightRange.max} kg.`;
+    }
+  }
+
+  if (
+    !hard.height_cm &&
+    !hard.weight_kg &&
+    !suggestions.height_cm &&
+    !suggestions.weight_kg &&
+    height != null &&
+    weight != null
+  ) {
     const bmi = bmiFor(height, weight);
     const child = age != null && age < 18;
     const minBmi = child ? 11 : 14;
     const maxBmi = child ? 40 : 60;
     if (bmi != null && (bmi < minBmi || bmi > maxBmi)) {
       const message = "Age, height, and weight do not look consistent. Please check the values.";
-      errors.height_cm = message;
-      errors.weight_kg = message;
+      suggestions.height_cm = message;
+      suggestions.weight_kg = message;
     }
   }
 
-  return errors;
+  return suggestions;
 }
 
 export function isSnapshotMetricsValid(answers: IntakeAnswers) {

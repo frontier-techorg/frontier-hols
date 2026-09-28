@@ -190,7 +190,7 @@ async def _payment_failed(
         card_last4=card_last4 or "••••",
         failure_reason=failure_reason or "Card charge failed.",
         attempted_at=now_iso(),
-        cta_path="/student/profile/card",
+        cta_path="/student/plans",
     )
     await _safe_emit(
         user_id=str(user["user_id"]),
@@ -205,7 +205,7 @@ async def _payment_failed(
         await email_service.send_template_email(
             "plan_change_failed",
             user.get("email"),
-            **{**data, "cta_path": "/student/payment"},
+            **{**data, "cta_path": "/student/plans"},
         )
     await _safe_summary("payment_failures")
 
@@ -290,7 +290,7 @@ async def _purchase_paid(
             user_id=str(user["user_id"]),
             role=UserRole.STUDENT.value,
             action="student.plan_changed",
-            data={**shared, "cta_path": "/student/payment"},
+            data={**shared, "cta_path": "/student/plans"},
             email_to=user.get("email"),
         )
 

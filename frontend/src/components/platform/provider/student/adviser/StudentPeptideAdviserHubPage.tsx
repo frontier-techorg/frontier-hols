@@ -7,6 +7,7 @@ import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import { AdviserPageLayout } from "@/components/platform/provider/student/adviser/AdviserPageLayout";
 import { CreatePatientDialog } from "@/components/platform/provider/student/adviser/CreatePatientDialog";
 import { IntakeOnboardingDialog } from "@/components/platform/provider/student/adviser/IntakeOnboardingDialog";
+import { LecturePlansDialog } from "@/components/platform/provider/student/lectures/LecturePlansDialog";
 import { INTAKE_STAGES } from "@/components/platform/provider/student/adviser/IntakeWizard";
 import {
   PatientListPanel,
@@ -21,16 +22,17 @@ import {
   getCachedAdviserBootstrap,
   getPatient,
   listPatients,
+  readStoredActivePatientId,
   recommendPatient,
   savePatientIntake,
   sanitizeIntakeAnswers,
   isSnapshotComplete,
+  writeStoredActivePatientId,
   type IntakeAnswers,
   type PatientDetail,
   type PatientSummary,
   type QuestionnaireFlow,
 } from "@/lib/integrate/provider/student/chat";
-import { ACTIVE_PATIENT_STORAGE_KEY } from "@/lib/integrate/provider/student/chat/constants";
 import { scrollAppToTopSoon } from "@/lib/scroll-to-top";
 import {
   isMembershipRequiredError,
@@ -78,17 +80,14 @@ export function resolveStep(patient: PatientDetail): number {
 }
 
 function progressLabel(patient: PatientSummary, answersStep?: number, chatLocked = false) {
+  if (patient.primary_goal) return String(patient.primary_goal);
   if (patient.has_recommendation) {
-    return chatLocked
-      ? "Membership required to open chat"
-      : `${patient.message_count} messages · Open chat`;
+    return chatLocked ? "Membership required" : "Recommendation ready";
   }
-  if (patient.status === "draft") {
-    const step = answersStep ?? 0;
-    const stage = INTAKE_STAGES[Math.min(step, INTAKE_STAGES.length - 1)];
-    return `Onboarding · ${stage}`;
+  if (typeof answersStep === "number") {
+    return INTAKE_STAGES[Math.min(answersStep, INTAKE_STAGES.length - 1)];
   }
-  return patient.primary_goal || "Draft intake";
+  return "Intake in progress";
 }
 
 function chatRouteForPatient(patientId: string) {
@@ -112,6 +111,7 @@ export function StudentPeptideAdviserHubPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDialogError, setCreateDialogError] = useState<string | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [plansOpen, setPlansOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -168,7 +168,7 @@ export function StudentPeptideAdviserHubPage() {
 
   const routeToChat = useCallback(
     (patientId: string) => {
-      window.sessionStorage.setItem(ACTIVE_PATIENT_STORAGE_KEY, patientId);
+      writeStoredActivePatientId(patientId);
       router.push(chatRouteForPatient(patientId));
     },
     [router],
@@ -187,7 +187,7 @@ export function StudentPeptideAdviserHubPage() {
       if (!membershipAccess.ready) return;
 
       try {
-        const storedPatientId = window.sessionStorage.getItem(ACTIVE_PATIENT_STORAGE_KEY);
+        const storedPatientId = readStoredActivePatientId();
         const cached = getCachedAdviserBootstrap(storedPatientId ?? undefined);
         if (cached && !cancelled) {
           setFlow(cached.flow);
@@ -204,7 +204,7 @@ export function StudentPeptideAdviserHubPage() {
 
         if (payload.active_patient && !payload.active_patient.recommendation) {
           if (payload.active_patient_id) {
-            window.sessionStorage.setItem(ACTIVE_PATIENT_STORAGE_KEY, payload.active_patient_id);
+            writeStoredActivePatientId(payload.active_patient_id);
           }
           openOnboarding(payload.active_patient);
         }
@@ -268,20 +268,20 @@ export function StudentPeptideAdviserHubPage() {
       const summary = patients.find((patient) => patient.patient_id === patientId);
       if (summary?.has_recommendation) {
         if (membershipAccess.locked) {
-          router.push("/student/payment");
+          setPlansOpen(true);
           return;
         }
         routeToChat(patientId);
         return;
       }
 
-      window.sessionStorage.setItem(ACTIVE_PATIENT_STORAGE_KEY, patientId);
+      writeStoredActivePatientId(patientId);
       try {
         const patient = await getPatient(patientId);
         openOnboarding(patient);
       } catch (err) {
         if (isMembershipRequiredError(err)) {
-          router.push("/student/payment");
+          setPlansOpen(true);
           return;
         }
         setActionError(err instanceof ApiRequestError ? err.message : "Could not load patient.");
@@ -297,7 +297,7 @@ export function StudentPeptideAdviserHubPage() {
       setIsCreating(true);
       try {
         const patient = await createPatient(displayName);
-        window.sessionStorage.setItem(ACTIVE_PATIENT_STORAGE_KEY, patient.patient_id);
+        writeStoredActivePatientId(patient.patient_id);
         setSearchQuery("");
         setDebouncedSearch("");
         setFilter("all");
@@ -347,7 +347,7 @@ export function StudentPeptideAdviserHubPage() {
   const handleGenerateRecommendation = useCallback(async () => {
     if (!activePatient) return;
     if (membershipAccess.locked) {
-      router.push("/student/payment");
+      setPlansOpen(true);
       return;
     }
 
@@ -360,7 +360,7 @@ export function StudentPeptideAdviserHubPage() {
       routeToChat(activePatient.patient_id);
     } catch (err) {
       if (isMembershipRequiredError(err)) {
-        router.push("/student/payment");
+        setPlansOpen(true);
         return;
       }
       setActionError(
@@ -369,7 +369,7 @@ export function StudentPeptideAdviserHubPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [activePatient, membershipAccess.locked, refreshPatients, routeToChat, router]);
+  }, [activePatient, membershipAccess.locked, refreshPatients, routeToChat]);
 
   const showRecommendPrompt =
     Boolean(activePatient) &&
@@ -396,6 +396,14 @@ export function StudentPeptideAdviserHubPage() {
         onSubmit={(displayName) => void handleCreatePatient(displayName)}
       />
 
+      <LecturePlansDialog
+        open={plansOpen}
+        stacked
+        title="Membership required"
+        description="A plan is required to generate this recommendation and open consultation chat."
+        onClose={() => setPlansOpen(false)}
+      />
+
       {flow && activePatient && onboardingOpen ? (
         <IntakeOnboardingDialog
           open={onboardingOpen}
@@ -420,9 +428,8 @@ export function StudentPeptideAdviserHubPage() {
         />
       ) : null}
 
-      {loadError ? (
-        <AuthAlert variant="error">{loadError}</AuthAlert>
-      ) : loading ? (
+      {loadError ? <AuthAlert variant="error">{loadError}</AuthAlert> : null}
+      {loading ? (
         <AdviserHubPageSkeleton />
       ) : (
         <>
@@ -472,7 +479,7 @@ export function StudentPeptideAdviserHubPage() {
                 <button
                   type="button"
                   onClick={() => setOnboardingOpen(true)}
-                  className="dashboard-row flex min-h-11 w-full min-w-0 items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] px-3.5 py-3 text-left sm:px-4"
+                  className="adviser-resume-row flex min-h-11 w-full min-w-0 items-center gap-3 rounded-2xl border px-3.5 py-3 text-left sm:px-4"
                 >
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--dash-navy)] text-white">
                     <SidebarSvgIcon name="next" size={16} />

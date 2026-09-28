@@ -21,7 +21,7 @@ from database_entities import (
     now_iso,
 )
 from services.common.pagination import build_pagination, normalize_value
-from services.routes.chat.questionnaire import sanitize_intake_answers
+from services.routes.chat.questionnaire import recommendation_intro, sanitize_intake_answers
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +88,35 @@ def _patient_summary(entity: AdviserPatient, message_count: int = 0) -> dict[str
     )
 
 
+def _public_recommendation_board(entity: AdviserPatient) -> Optional[dict[str, Any]]:
+    """Board shown in chat, including card fields for recommendations already stored."""
+    stored = entity.recommendation_board or {}
+    if not entity.evaluation:
+        return stored or None
+    from services.routes.chat.questionnaire import build_recommendation_board
+
+    return build_recommendation_board(
+        entity.evaluation,
+        confidence=str(stored.get("confidence") or "balanced"),
+        preferred=stored.get("preferred"),
+    )
+
+
+def _stamp_recommendation_intro(
+    messages: list[dict[str, Any]],
+    display_name: str,
+    board: Optional[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    intro = recommendation_intro(display_name, board)
+    stamped: list[dict[str, Any]] = []
+    for message in messages:
+        if message.get("kind") == "recommendation":
+            stamped.append({**message, "content": intro})
+        else:
+            stamped.append(message)
+    return stamped
+
+
 def _patient_detail(
     entity: AdviserPatient,
     chat: AdviserPatientChat,
@@ -95,11 +124,7 @@ def _patient_detail(
     include_messages: bool = False,
     messages: Optional[list[dict[str, Any]]] = None,
 ) -> dict[str, Any]:
-    board = entity.recommendation_board
-    if not board and entity.evaluation:
-        from services.routes.chat.questionnaire import build_recommendation_board
-
-        board = build_recommendation_board(entity.evaluation, confidence="balanced")
+    board = _public_recommendation_board(entity)
 
     payload: dict[str, Any] = {
         "patient_id": entity.patient_id,
@@ -118,7 +143,8 @@ def _patient_detail(
         "updated_at": entity.updated_at,
     }
     if include_messages:
-        payload["messages"] = messages if messages is not None else chat.messages
+        source = messages if messages is not None else chat.messages
+        payload["messages"] = _stamp_recommendation_intro(source, entity.display_name, board)
     else:
         payload["messages"] = []
     return normalize_value(payload)
@@ -165,7 +191,7 @@ def _patient_with_messages_page(
         limit=limit or settings.chat_messages_page_size,
     )
     detail = _patient_detail(entity, chat)
-    detail["messages"] = page["messages"]
+    detail["messages"] = _stamp_recommendation_intro(page["messages"], entity.display_name, detail.get("recommendation_board"))
     detail["messages_pagination"] = page["pagination"]
     return detail
 
@@ -421,11 +447,18 @@ async def get_patient_messages(
         return cached
 
     chat_item = await _get_chat_item(user_id, patient_id, projection="entity, messages")
+    patient_item = await _get_patient_item(user_id, patient_id)
+    patient = _patient_from_item(patient_item)
     if chat_item:
         messages = chat_item.get("messages") or []
     else:
-        await _get_patient_item(user_id, patient_id)
         messages = []
+
+    messages = _stamp_recommendation_intro(
+        messages,
+        patient.display_name,
+        _public_recommendation_board(patient),
+    )
 
     payload = _paginate_messages(messages, limit=limit, before=before)
     _write_message_cache(cache_key, payload)
@@ -474,28 +507,36 @@ async def get_adviser_bootstrap(
     started = time.perf_counter()
     limit = message_limit or settings.chat_messages_page_size
 
+    patients_result = await list_patients(user_id=user_id, page=page, limit=patients_limit)
+    active_patient = None
+    active_id = None
+
     if patient_id:
-        patients_result, active_patient = await asyncio.gather(
-            list_patients(user_id=user_id, page=page, limit=patients_limit),
-            get_patient(
+        try:
+            active_patient = await get_patient(
                 user_id=user_id,
                 patient_id=patient_id,
                 include_messages=include_messages,
                 message_limit=limit,
-            ),
-        )
-        active_id = patient_id
-    else:
-        patients_result = await list_patients(user_id=user_id, page=page, limit=patients_limit)
-        active_id = patients_result["patients"][0]["patient_id"] if patients_result["patients"] else None
-        active_patient = None
-        if active_id:
-            active_patient = await get_patient(
-                user_id=user_id,
-                patient_id=active_id,
-                include_messages=include_messages,
-                message_limit=limit,
             )
+            active_id = patient_id
+        except HTTPException as exc:
+            if exc.status_code != status.HTTP_404_NOT_FOUND:
+                raise
+            logger.info(
+                "Adviser bootstrap ignored missing patient %s for user %s",
+                patient_id,
+                user_id,
+            )
+
+    if active_patient is None and patients_result["patients"]:
+        active_id = patients_result["patients"][0]["patient_id"]
+        active_patient = await get_patient(
+            user_id=user_id,
+            patient_id=active_id,
+            include_messages=include_messages,
+            message_limit=limit,
+        )
 
     logger.info(
         "Adviser bootstrap for user %s in %.0fms (patients=%d active=%s)",
@@ -573,11 +614,7 @@ async def save_patient_recommendation(
     else:
         chat = AdviserPatientChat(user_id=user_id, patient_id=patient_id, created_at=timestamp)
 
-    board_reply = ""
-    if isinstance(recommendation_board, dict):
-        board_reply = str(recommendation_board.get("reply") or "").strip()
-
-    intro = board_reply or "Recommendation ready. Explore the War Room board, then ask follow-up questions."
+    intro = recommendation_intro(patient.display_name, recommendation_board)
     chat.messages = [
         {
             "message_id": str(uuid.uuid4()),
@@ -600,65 +637,11 @@ async def save_patient_recommendation(
     return _patient_detail(patient, chat)
 
 
-async def save_patient_board(
-    *,
-    user_id: str,
-    patient_id: str,
-    recommendation_board: dict[str, Any],
-    receipt: Optional[str] = None,
-) -> dict[str, Any]:
-    """Persist War Room board settings. Chat receipt is optional (focus-only saves stay silent)."""
-    patient_item = await _get_patient_item(user_id, patient_id)
-    patient = _patient_from_item(patient_item)
-    if not patient.evaluation or not patient.recommendation:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            "Generate a recommendation before updating the board.",
-        )
-
-    timestamp = now_iso()
-    patient.recommendation_board = recommendation_board
-    patient.updated_at = timestamp
-
-    receipt_text = str(receipt or "").strip()
-    chat_item = await _get_chat_item(user_id, patient_id)
-    chat = _chat_from_item(chat_item) if chat_item else AdviserPatientChat(
-        user_id=user_id,
-        patient_id=patient_id,
-        created_at=timestamp,
-    )
-    if receipt_text:
-        chat.messages.append(
-            {
-                "message_id": str(uuid.uuid4()),
-                "role": "assistant",
-                "content": receipt_text,
-                "created_at": timestamp,
-                "kind": "board_update",
-            }
-        )
-        chat.updated_at = timestamp
-        patient.message_count = len(chat.messages)
-        if patient.status == AdviserPatientStatus.RECOMMENDED:
-            patient.status = AdviserPatientStatus.CHATTING
-
-    def _write():
-        table = _table()
-        table.put_item(Item=patient.to_item())
-        if receipt_text or chat_item:
-            table.put_item(Item=chat.to_item())
-
-    await run_sync(_write)
-    _invalidate_message_cache(user_id, patient_id)
-    return await build_patient_messages_response(user_id=user_id, patient_id=patient_id)
-
-
 async def append_patient_messages(
     *,
     user_id: str,
     patient_id: str,
-    entries: list[dict[str, str]],
-    recommendation_board: Optional[dict[str, Any]] = None,
+    entries: list[dict[str, Any]],
 ) -> AdviserPatientChat:
     """Append multiple chat messages in a single read/write cycle."""
     patient_item = await _get_patient_item(user_id, patient_id)
@@ -675,20 +658,23 @@ async def append_patient_messages(
         patient_id=patient_id,
     )
 
-    if recommendation_board is not None:
-        patient.recommendation_board = recommendation_board
-
     timestamp = now_iso()
     for entry in entries:
-        chat.messages.append(
-            {
-                "message_id": str(uuid.uuid4()),
-                "role": entry["role"],
-                "content": entry["content"],
-                "created_at": timestamp,
-                "kind": entry.get("kind", "message"),
-            }
-        )
+        message: dict[str, Any] = {
+            "message_id": str(uuid.uuid4()),
+            "role": entry["role"],
+            "content": entry["content"],
+            "created_at": timestamp,
+            "kind": entry.get("kind", "message"),
+        }
+        questions = [
+            str(question).strip()
+            for question in (entry.get("suggested_questions") or [])
+            if str(question).strip()
+        ][:3]
+        if questions:
+            message["suggested_questions"] = questions
+        chat.messages.append(message)
     chat.updated_at = timestamp
     patient.message_count = len(chat.messages)
     patient.status = AdviserPatientStatus.CHATTING

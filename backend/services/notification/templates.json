@@ -14,18 +14,18 @@
   "student.payment_failed": {
     "title": "Payment failed",
     "body": "We could not charge {{amount}} for {{plan_name}}. {{failure_reason}}",
-    "href": "/student/profile/card",
+    "href": "/student/plans",
     "email": "payment_failed"
   },
   "student.plan_changed": {
     "title": "Plan updated",
     "body": "You switched from {{previous_plan_name}} to {{plan_name}}.",
-    "href": "/student/payment",
+    "href": "/student/plans",
     "email": "plan_changed"
   },
   "student.quiz_submitted": {
     "title": "Quiz submitted",
-    "body": "{{lesson_title}}: {{score_percent}}% · {{result_label}}",
+    "body": "Score {{score_percent}}% · {{result_label}}",
     "href": "/student/lectures"
   },
   "student.patient_created": {

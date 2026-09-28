@@ -104,11 +104,12 @@ async def list_affiliates(
 @handle_route_errors("list affiliate payout requests", log_prefix="Affiliates")
 async def list_admin_payouts(
     current_user: Annotated[CurrentUser, Depends(require_roles(UserRole.ADMIN))],
-    history_limit: int = Query(default=80, ge=1, le=200),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=15, ge=1, le=100),
 ) -> AdminPayoutOverviewResponse:
-    """Admin — pending payout requests plus recent payout history."""
+    """Admin — payout requests, newest pending first, one page at a time."""
     _ = current_user
-    result = await payout_service.list_admin_payouts(history_limit=history_limit)
+    result = await payout_service.list_admin_payouts(page=page, limit=limit)
     return success_response(AdminPayoutOverviewData(**result))
 
 

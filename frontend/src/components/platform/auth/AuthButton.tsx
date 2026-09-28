@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 type AuthButtonProps = {
@@ -11,6 +12,7 @@ type AuthButtonProps = {
   variant?: "primary" | "secondary";
 };
 
+/** Same yellow → navy spread hover as navbar / landing primary CTAs. */
 export function AuthButton({
   children,
   type = "button",
@@ -20,20 +22,14 @@ export function AuthButton({
   variant = "primary",
 }: AuthButtonProps) {
   return (
-    <button
+    <Button
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={cn(
-        "font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-6 text-sm font-medium tracking-[0.01em] transition",
-        "disabled:pointer-events-none disabled:opacity-60",
-        variant === "primary"
-          ? "dashboard-navy-btn bg-[#142644] text-white hover:brightness-110"
-          : "border-2 border-[#142644]/15 bg-[color:var(--dash-soft,#fff)] text-[#152744] hover:border-[#142644] hover:bg-[color:var(--dash-surface,#f7f9fc)]",
-        className,
-      )}
+      variant={variant === "secondary" ? "secondary" : "primary"}
+      className={cn("auth-submit w-full", className)}
     >
       {children}
-    </button>
+    </Button>
   );
 }

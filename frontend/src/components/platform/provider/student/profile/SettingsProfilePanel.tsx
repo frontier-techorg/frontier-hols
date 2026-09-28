@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
+import { Button } from "@/components/ui/Button";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
 import { SkeletonBlock } from "@/components/platform/provider/student/DashboardSkeletons";
 import {
   DEFAULT_COUNTRY_CODE,
@@ -196,50 +198,56 @@ function DashField({
         autoComplete={autoComplete}
         required={required}
         disabled={disabled}
-        className={cn("dashboard-field", disabled && "cursor-not-allowed opacity-70")}
+        className={cn(
+          "dashboard-field min-w-0 max-w-full",
+          disabled && "cursor-not-allowed truncate opacity-70",
+        )}
       />
     </div>
   );
 }
 
-function DashSelect({
-  id,
-  label,
-  value,
-  onChange,
-  disabled,
-  options,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  options: Array<{ value: string; label: string }>;
-}) {
+function ProfileFieldSkeleton() {
   return (
     <div className="grid min-w-0 gap-2">
-      <label htmlFor={id} className="dashboard-field-label">
-        {label}
-      </label>
-      <select
-        id={id}
-        name={id}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className={cn(
-          "dashboard-field dashboard-field-select min-h-11 w-full min-w-0 max-w-full sm:min-h-10",
-          disabled && "cursor-not-allowed opacity-50",
-        )}
-      >
-        {options.map((option) => (
-          <option key={`${option.value}-${option.label}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <SkeletonBlock className="h-3.5 w-24 max-w-full rounded-full" />
+      <SkeletonBlock className="h-12 w-full rounded-[0.875rem]" />
     </div>
+  );
+}
+
+function ProfileSettingsSkeleton() {
+  return (
+    <section
+      className="min-w-0 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white p-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5 md:p-6"
+      aria-busy="true"
+      aria-label="Loading profile"
+    >
+      <SkeletonBlock className="h-5 w-40 max-w-full rounded-full" />
+      <SkeletonBlock className="mt-2 h-4 w-full max-w-md rounded-full" />
+      <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4">
+        <ProfileFieldSkeleton />
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+          <ProfileFieldSkeleton />
+          <ProfileFieldSkeleton />
+        </div>
+        <ProfileFieldSkeleton />
+        <ProfileFieldSkeleton />
+        <div className="grid min-w-0 gap-3 md:grid-cols-2 md:gap-4">
+          <ProfileFieldSkeleton />
+          <ProfileFieldSkeleton />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+          <ProfileFieldSkeleton />
+          <ProfileFieldSkeleton />
+        </div>
+        <SkeletonBlock className="h-16 w-full rounded-2xl" />
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <SkeletonBlock className="h-10 w-full rounded-full sm:w-24" />
+          <SkeletonBlock className="h-10 w-full rounded-full sm:w-36" />
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -340,29 +348,11 @@ export function SettingsProfilePanel({
   }
 
   if (!profile) {
-    return (
-      <section
-        className="dashboard-glass-card min-w-0 rounded-2xl p-4 sm:p-5 md:p-6"
-        aria-busy="true"
-        aria-label="Loading profile"
-      >
-        <SkeletonBlock className="h-5 w-40 rounded-full" />
-        <SkeletonBlock className="mt-2 h-4 w-64 rounded-full" />
-        <div className="mt-6 grid gap-4">
-          <SkeletonBlock className="h-11 w-full rounded-2xl" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <SkeletonBlock className="h-11 w-full rounded-2xl" />
-            <SkeletonBlock className="h-11 w-full rounded-2xl" />
-          </div>
-          <SkeletonBlock className="h-11 w-full rounded-2xl" />
-          <SkeletonBlock className="h-11 w-full rounded-2xl" />
-        </div>
-      </section>
-    );
+    return <ProfileSettingsSkeleton />;
   }
 
   return (
-    <section className="dashboard-glass-card min-w-0 rounded-2xl p-4 sm:p-5 md:p-6">
+    <section className="min-w-0 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white p-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5 md:p-6">
       <h2 className="font-sans text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg">
         Profile information
       </h2>
@@ -423,7 +413,7 @@ export function SettingsProfilePanel({
         />
 
         <div className="grid min-w-0 gap-3 md:grid-cols-2 md:gap-4">
-          <DashSelect
+          <ProfileSelect
             id="state"
             label="State"
             value={location.stateSelect}
@@ -454,7 +444,7 @@ export function SettingsProfilePanel({
               placeholder="Enter state"
             />
           ) : (
-            <DashSelect
+            <ProfileSelect
               id="city"
               label="City"
               value={location.citySelect}
@@ -530,22 +520,22 @@ export function SettingsProfilePanel({
           </span>
         </label>
 
-        <div className="mt-1 flex flex-col-reverse gap-2 border-t border-[color:var(--dash-surface-border)] pt-4 sm:flex-row sm:items-center sm:justify-end sm:gap-2.5">
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2.5">
           <button
             type="button"
             onClick={resetForm}
             disabled={!hasChanges || saving}
-            className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
           >
             Cancel
           </button>
-          <button
+          <Button
             type="submit"
             disabled={saving || !hasChanges}
-            className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-6 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-60 sm:min-h-10 sm:w-auto sm:min-w-[10rem]"
+            className="lecture-page-action h-10 min-h-10 w-full py-0 text-sm sm:w-auto sm:min-w-[9rem]"
           >
             {saving ? "Saving…" : "Save changes"}
-          </button>
+          </Button>
         </div>
       </form>
     </section>

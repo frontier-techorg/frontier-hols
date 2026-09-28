@@ -48,10 +48,10 @@ export function WelcomeChip({
         <span
           className={cn(
             "text-brand-caption font-medium tracking-[0.005em]",
-            navy ? "text-white/70" : "text-[color:var(--dash-muted)]",
+            navy ? "text-white" : "text-[color:var(--dash-muted)]",
           )}
         >
-          Welcome back,
+          Welcome Back !
         </span>
         <span
           className={cn(

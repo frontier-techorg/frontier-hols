@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
+import { Button } from "@/components/ui/Button";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import { SkeletonBlock } from "@/components/platform/provider/student/DashboardSkeletons";
 import { ApiRequestError } from "@/lib/integrate/client";
@@ -26,6 +27,7 @@ export function WebinarDetailPanel({
   compact = false,
   onWebinarChange,
 }: WebinarDetailPanelProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +90,7 @@ export function WebinarDetailPanel({
         <p className="font-sans mt-4 text-base font-semibold text-[color:var(--dash-text)] sm:text-lg">
           Webinar unavailable
         </p>
-        <p className="text-brand-body mt-1.5 max-w-sm text-[color:var(--dash-muted)]">
+        <p className="mt-1.5 max-w-sm font-sans text-sm font-normal leading-6 text-[color:var(--dash-muted)]">
           This session could not be loaded. Go back to the list and try another webinar.
         </p>
         {error ? (
@@ -126,19 +128,16 @@ export function WebinarDetailPanel({
             </div>
           )}
         </div>
-        <p className="text-brand-caption mt-4 inline-flex items-center gap-1.5 font-semibold text-[color:var(--dash-muted)]">
-          <SidebarSvgIcon name="clock" size={13} strokeWidth={1.9} />
+        <p className="mt-3 font-sans text-sm text-[color:var(--dash-muted)]">
+          <span className="font-medium text-[color:var(--dash-faint)]">Time</span>{" "}
           {formatWebinarWhen(webinar.starts_at)}
         </p>
-        <h2 className="font-sans mt-2 break-words text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
-          {webinar.title}
-        </h2>
         {webinar.description ? (
-          <p className="text-brand-body mt-3 max-w-3xl break-words leading-relaxed text-[color:var(--dash-muted)]">
+          <p className="mt-2 max-w-3xl break-words font-sans text-sm font-normal leading-6 text-[color:var(--dash-muted)]">
             {webinar.description}
           </p>
         ) : (
-          <p className="text-brand-body mt-3 break-words text-[color:var(--dash-faint)]">
+          <p className="mt-2 break-words font-sans text-sm font-normal leading-6 text-[color:var(--dash-faint)]">
             Details for this live session will be shared closer to the start time.
           </p>
         )}
@@ -163,31 +162,37 @@ export function WebinarDetailPanel({
           />
         </div>
 
-        <div className="my-5 h-px bg-[color:var(--dash-surface-border)]" />
-
-        <div className="mt-auto flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-2">
           {webinar.is_booked ? (
             webinar.join_url ? (
               <a
                 href={webinar.join_url}
                 target="_blank"
                 rel="noreferrer"
-                className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10"
+                className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white"
               >
                 Join live
                 <SidebarSvgIcon name="next" size={14} strokeWidth={2} />
               </a>
             ) : (
-              <span className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] sm:min-h-10">
+              <span className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 min-h-10 w-full items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)]">
                 Join link coming soon
               </span>
             )
           ) : (
-            <button
+            <Button
               type="button"
               disabled={booking || webinar.seats_remaining <= 0}
-              onClick={() => void handleBook()}
-              className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white disabled:pointer-events-none disabled:opacity-60 sm:min-h-10"
+              onClick={() => {
+                if (webinar.price > 0) {
+                  router.push(
+                    `/student/plans/checkout?webinar=${encodeURIComponent(webinar.webinar_id)}`,
+                  );
+                  return;
+                }
+                void handleBook();
+              }}
+              className="lecture-page-action w-full"
             >
               <SidebarSvgIcon name="check" size={15} strokeWidth={2.2} />
               {booking
@@ -197,23 +202,14 @@ export function WebinarDetailPanel({
                   : webinar.price > 0
                     ? `Pay ${formatMoney(webinar.price, webinar.currency)} & book`
                     : "Book free seat"}
-            </button>
+            </Button>
           )}
 
-          {webinar.price > 0 && !webinar.is_booked ? (
-            <Link
-              href="/student/profile/card"
-              className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)] sm:min-h-10"
-            >
-              <SidebarSvgIcon name="payment" size={14} strokeWidth={1.9} />
-              Manage card
-            </Link>
-          ) : null}
         </div>
 
         {webinar.price > 0 && !webinar.is_booked ? (
           <p className="text-brand-caption mt-4 text-[color:var(--dash-faint)]">
-            Paid bookings charge your saved HOLS payment card.
+            Paid seats go through checkout before the booking is saved.
           </p>
         ) : null}
         </aside>
@@ -229,21 +225,39 @@ function WebinarDetailSkeleton({ compact }: { compact?: boolean }) {
       aria-busy="true"
       aria-label="Loading webinar"
     >
-      <div className={cn("dashboard-glass-card space-y-3 rounded-2xl p-4", !compact && "sm:p-5 md:p-6")}>
+      <section
+        className={cn(
+          "dashboard-glass-card flex h-full min-w-0 flex-col overflow-hidden rounded-2xl p-4",
+          !compact && "sm:p-5 md:p-6",
+        )}
+      >
         <SkeletonBlock className="aspect-[16/9] w-full rounded-2xl" />
-        <SkeletonBlock className="h-3 w-40 rounded-full" />
-        <SkeletonBlock className="h-7 w-3/4 rounded-full" />
-        <SkeletonBlock className="h-3 w-full rounded-full" />
-        <SkeletonBlock className="h-3 w-[92%] rounded-full" />
-        <SkeletonBlock className="h-3 w-[70%] rounded-full" />
-      </div>
-      <div className="dashboard-glass-card h-fit rounded-2xl p-4 sm:p-5 md:p-6">
-        <SkeletonBlock className="h-3 w-20 rounded-full" />
-        <SkeletonBlock className="mt-4 h-14 w-full rounded-2xl" />
-        <SkeletonBlock className="mt-2.5 h-14 w-full rounded-2xl" />
-        <SkeletonBlock className="mt-2.5 h-14 w-full rounded-2xl" />
-        <SkeletonBlock className="mt-6 h-10 w-full rounded-full" />
-      </div>
+        <SkeletonBlock className="mt-3 h-4 w-40 max-w-full rounded-full" />
+        <div className="mt-2 min-w-0 space-y-2">
+          <SkeletonBlock className="h-3.5 w-full rounded-full" />
+          <SkeletonBlock className="h-3.5 w-[92%] max-w-full rounded-full" />
+          <SkeletonBlock className="h-3.5 w-[68%] max-w-full rounded-full" />
+        </div>
+      </section>
+
+      <aside className="dashboard-glass-card flex h-full min-w-0 flex-col rounded-2xl p-4 sm:p-5 md:p-6">
+        <SkeletonBlock className="h-3 w-16 rounded-full" />
+        <div className="mt-4 grid min-w-0 gap-2.5">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div
+              key={index}
+              className="flex min-w-0 items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] px-3.5 py-2.5"
+            >
+              <SkeletonBlock className="h-9 w-9 shrink-0 rounded-[0.7rem]" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <SkeletonBlock className="h-3.5 w-16 max-w-full rounded-full" />
+                <SkeletonBlock className="h-3.5 w-24 max-w-full rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <SkeletonBlock className="mt-4 h-10 w-full rounded-full" />
+      </aside>
     </div>
   );
 }
@@ -258,13 +272,13 @@ function BookingStat({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] px-3.5 py-3">
-      <span className="dashboard-tool-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)]">
-        <SidebarSvgIcon name={icon} size={15} strokeWidth={1.9} />
+    <div className="webinar-booking-stat flex items-center gap-3 rounded-2xl border px-3.5 py-2.5">
+      <span className="webinar-booking-icon">
+        <SidebarSvgIcon name={icon} size={18} strokeWidth={1.75} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-brand-caption text-[color:var(--dash-faint)]">{label}</p>
-        <p className="font-sans truncate text-sm font-semibold text-[color:var(--dash-text)]">{value}</p>
+        <p className="font-sans text-sm font-normal leading-5 text-[color:var(--dash-muted)]">{label}</p>
+        <p className="font-sans truncate text-sm font-semibold leading-5 text-[color:var(--dash-text)]">{value}</p>
       </div>
     </div>
   );

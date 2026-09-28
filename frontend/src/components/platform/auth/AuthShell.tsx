@@ -47,7 +47,7 @@ export function AuthShell({
 
             <div
               className={cn(
-                "auth-panel dashboard-glass-card mx-auto w-full overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8",
+                "auth-panel mx-auto w-full overflow-hidden rounded-2xl p-4 sm:p-6 md:p-8",
                 contentWidth === "lg" ? "max-w-xl" : "max-w-md",
               )}
             >

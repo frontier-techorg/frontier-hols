@@ -37,7 +37,6 @@ export function CalculatorVisual({
   peptideAmount = "",
 }: CalculatorVisualProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<HTMLDivElement>(null);
 
   const waterAmount = parsePositiveAmount(waterMl);
   const peptideVal = parsePositiveAmount(peptideAmount);
@@ -85,36 +84,24 @@ export function CalculatorVisual({
   useGSAP(
     () => {
       registerGsap();
-      if (prefersReducedMotion() || !rootRef.current) return;
+      if (!rootRef.current) return;
+      gsap.set(rootRef.current, { autoAlpha: 1, y: 0 });
+      if (prefersReducedMotion()) return;
       gsap.fromTo(
         rootRef.current,
-        { autoAlpha: 0.55, y: 14 },
-        { autoAlpha: 1, y: 0, duration: 0.45, ease: "power2.out" },
+        { y: 10 },
+        { y: 0, duration: 0.35, ease: "power2.out", clearProps: "transform" },
       );
     },
     { scope: rootRef, dependencies: [mode, syringeMl] },
   );
 
-  useGSAP(
-    () => {
-      registerGsap();
-      if (prefersReducedMotion() || !sceneRef.current) return;
-
-      gsap.fromTo(
-        sceneRef.current,
-        { autoAlpha: 0.7, y: 10 },
-        { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out" },
-      );
-    },
-    { scope: sceneRef, dependencies: [mode] },
-  );
-
   return (
     <div
       ref={rootRef}
-      className="dashboard-glass-card relative mx-auto flex h-full w-full min-w-0 max-w-md flex-col justify-center overflow-hidden rounded-2xl px-3 py-2 max-[390px]:px-2.5 max-[390px]:py-1.5 sm:max-w-lg sm:px-5 sm:py-3 md:px-8 md:py-4 lg:mt-0 lg:max-w-none"
+      className="dashboard-glass-card relative mx-auto flex h-auto w-full min-w-0 max-w-none flex-col overflow-visible rounded-2xl px-3 py-4 max-[390px]:px-2.5 max-[390px]:py-3 sm:px-5 sm:py-5 md:px-6 md:py-6"
     >
-      <div ref={sceneRef}>
+      <div>
         <CalculatorReconScene
           layout="overview"
           syringeMl={syringeMl}

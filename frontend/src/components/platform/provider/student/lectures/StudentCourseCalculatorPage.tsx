@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
-import { CoursePageSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
 import { StudentPeptideCalculatorPage } from "@/components/platform/provider/student/calculator/StudentPeptideCalculatorPage";
 import { CoursePageLayout } from "@/components/platform/provider/student/lectures/CoursePageLayout";
 import { LectureMembershipLockedScreen } from "@/components/platform/provider/student/lectures/LectureMembershipLock";
-import { LecturesPageLayout } from "@/components/platform/provider/student/lectures/LecturesPageLayout";
 import { ApiRequestError } from "@/lib/integrate/client";
 import { getCourse, type CourseSummary } from "@/lib/integrate/provider/student/lectures";
 import {
@@ -49,9 +47,17 @@ export function StudentCourseCalculatorPage({ courseId }: StudentCourseCalculato
 
   if (!membershipAccess.ready) {
     return (
-      <LecturesPageLayout>
-        <CoursePageSkeleton />
-      </LecturesPageLayout>
+      <CoursePageLayout
+        title="Calculator"
+        description=""
+        courseId={courseId}
+        courseNavActive="calculator"
+        backHref={`/student/lectures/${courseId}`}
+        backLabel="Back to cover"
+        hideHero
+      >
+        {null}
+      </CoursePageLayout>
     );
   }
 
@@ -70,7 +76,6 @@ export function StudentCourseCalculatorPage({ courseId }: StudentCourseCalculato
       hideHero
     >
       {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
-      {loading && !course ? <CoursePageSkeleton /> : null}
       {!loading || course ? (
         <StudentPeptideCalculatorPage embedded key={`course-calculator-${courseId}`} />
       ) : null}

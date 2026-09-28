@@ -7,7 +7,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  useSyncExternalStore,
   type CSSProperties,
 } from "react";
 import { HeroLogo } from "@/components/hero/HeroLogo";
@@ -15,7 +14,6 @@ import {
   ChevronRight,
   Icon,
   Menu,
-  Moon,
   X,
 } from "@/components/icons";
 import { PortalNavIcon, SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
@@ -27,15 +25,7 @@ import {
   portalPageDescClass,
   portalPageTitleClass,
 } from "@/components/platform/provider/portal-styles";
-import { parsePortalTheme, PORTAL_THEME_KEY } from "@/components/platform/provider/portal-theme";
-import {
-  getPortalThemeMemory,
-  getPortalThemeSnapshot,
-  setPortalThemeMemory,
-  subscribePortalTheme,
-  writePortalTheme,
-} from "@/components/platform/provider/portal-theme-store";
-import { useServerPortalTheme } from "@/components/platform/provider/PortalThemeProvider";
+import { writePortalTheme } from "@/components/platform/provider/portal-theme-store";
 import { NotificationsLiveSync, useUnreadNotificationsCount } from "@/components/platform/provider/notifications/NotificationsLiveSync";
 import { cn } from "@/lib/utils";
 
@@ -65,8 +55,10 @@ type PortalShellProps = {
   showPageHeader?: boolean;
   /** When true, skip the sticky top chrome so the page can own a fixed header. */
   contentFlush?: boolean;
-  /** Full-bleed brand gradient on the content screen (no inset “cart” panel). */
+  /** Full-bleed portal surface on the content screen (no inset “cart” panel). */
   brandBackdrop?: boolean;
+  /** Hide the portal sidebar (full-bleed pages like checkout). */
+  hideSidebar?: boolean;
   nav: PortalNavItem[];
   children: React.ReactNode;
 };
@@ -95,21 +87,15 @@ export function PortalShell({
   showPageHeader = true,
   contentFlush = false,
   brandBackdrop = false,
+  hideSidebar = false,
   nav,
   children,
 }: PortalShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const serverTheme = useServerPortalTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  // Cookie/SSR theme for first paint; localStorage/memory for client navigations.
-  const getServerSnapshot = useCallback(() => serverTheme, [serverTheme]);
-  const theme = useSyncExternalStore(
-    subscribePortalTheme,
-    getPortalThemeSnapshot,
-    getServerSnapshot,
-  );
+  const theme = "light" as const;
   const [flyoutHref, setFlyoutHref] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const [navQuery, setNavQuery] = useState("");
@@ -118,11 +104,13 @@ export function PortalShell({
   const unreadLabel = unreadCount > 99 ? "99+" : String(unreadCount);
 
   // Collapsed icon-rail only applies on desktop; mobile drawer is always full.
-  const compact = collapsed && isDesktop;
+  const compact = !hideSidebar && collapsed && isDesktop;
 
-  const sidebarOffset = collapsed
-    ? "lg:ml-[4.75rem]"
-    : "lg:ml-[16rem]";
+  const sidebarOffset = hideSidebar
+    ? ""
+    : collapsed
+      ? "lg:ml-[4.75rem]"
+      : "lg:ml-[16rem]";
   const pageEyebrow = eyebrow ?? roleEyebrow(role);
 
   const filteredNav = useMemo(() => {
@@ -156,24 +144,14 @@ export function PortalShell({
       const storedCollapsed = localStorage.getItem(COLLAPSED_KEY);
       if (storedCollapsed !== null) setCollapsed(storedCollapsed === "true");
 
-      const storedTheme = parsePortalTheme(localStorage.getItem(PORTAL_THEME_KEY));
-      const nextTheme = storedTheme ?? serverTheme;
-      const htmlTheme = parsePortalTheme(document.documentElement.getAttribute("data-portal-theme"));
-      if (nextTheme !== serverTheme || htmlTheme !== nextTheme || getPortalThemeMemory() !== nextTheme) {
-        writePortalTheme(nextTheme);
-      } else {
-        setPortalThemeMemory(nextTheme);
-      }
+      // Portals are light-only — clear any leftover dark preference.
+      writePortalTheme("light");
 
       // Never restore an open mobile drawer — start closed on small screens.
       setMobileOpen(false);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [serverTheme]);
-
-  const toggleTheme = useCallback(() => {
-    writePortalTheme(theme === "light" ? "dark" : "light");
-  }, [theme]);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, String(collapsed));
@@ -242,7 +220,7 @@ export function PortalShell({
   function renderNavLink(item: PortalNavItem, opts?: { inFlyout?: boolean; child?: PortalNavChild }) {
     const href = opts?.child?.href ?? item.href;
     const label = opts?.child?.label ?? item.label;
-    // Only color top-level items (e.g. Payment). Child routes stay unstyled.
+    // Only color top-level items (e.g. Plans). Child routes stay unstyled.
     const active = opts?.child
       ? isItemActive(pathname, opts.child.href, opts.child.exact)
       : isNavItemActive(pathname, item);
@@ -259,7 +237,7 @@ export function PortalShell({
         className={cn(
           "portal-nav-item group relative flex items-center transition-colors duration-200",
           portalNavItemClass,
-          opts?.inFlyout ? "h-10 gap-2.5 rounded-xl px-3" : compact ? "h-11 justify-center rounded-2xl px-0" : "h-12 gap-3 rounded-2xl px-3.5",
+          opts?.inFlyout ? "h-10 gap-2.5 rounded-xl px-3" : compact ? "h-10 justify-center rounded-xl px-0" : "h-10 gap-2.5 rounded-xl px-3",
           active && "is-active",
         )}
       >
@@ -297,7 +275,7 @@ export function PortalShell({
     >
       <NotificationsLiveSync />
       <div className="flex min-h-svh">
-        {mobileOpen ? (
+        {!hideSidebar && mobileOpen ? (
           <button
             type="button"
             aria-label="Close sidebar backdrop"
@@ -306,6 +284,7 @@ export function PortalShell({
           />
         ) : null}
 
+        {!hideSidebar ? (
         <aside
           aria-hidden={!mobileOpen && !isDesktop}
           className={cn(
@@ -327,7 +306,7 @@ export function PortalShell({
               )}
             >
               <HeroLogo
-                variant={theme === "dark" ? "light" : "dark"}
+                variant="dark"
                 compact={compact}
                 linked={false}
                 className={cn(compact ? "h-8 w-8" : "h-10 w-auto max-w-[12rem]")}
@@ -342,11 +321,11 @@ export function PortalShell({
                 title="Search"
                 onClick={() => setCollapsed(false)}
               >
-                <SidebarSvgIcon name="search" size={18} />
+                <SidebarSvgIcon name="search" size={16} />
               </button>
             ) : (
               <label className="portal-sidebar-search hols-hover-border">
-                <SidebarSvgIcon name="search" size={18} className="shrink-0" />
+                <SidebarSvgIcon name="search" size={16} className="shrink-0" />
                 <input
                   type="search"
                   value={navQuery}
@@ -359,7 +338,7 @@ export function PortalShell({
             )}
           </div>
 
-          <nav className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-3" aria-label="Portal navigation">
+          <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-3" aria-label="Portal navigation">
             {filteredNav.length === 0 ? (
               <p className="px-3 py-4 text-center text-brand-caption text-[color:var(--sidebar-muted)]">
                 No matches
@@ -386,9 +365,9 @@ export function PortalShell({
                       type="button"
                       onClick={() => toggleGroup(item.href)}
                       className={cn(
-                        "portal-nav-item group relative flex w-full items-center rounded-2xl transition-colors duration-200",
+                        "portal-nav-item group relative flex w-full items-center rounded-xl transition-colors duration-200",
                         portalNavItemClass,
-                        "h-12 gap-3 rounded-2xl px-3.5",
+                        "h-10 gap-2.5 rounded-xl px-3",
                         active && "is-active",
                       )}
                     >
@@ -451,38 +430,9 @@ export function PortalShell({
               )}
             >
               <span className="portal-sidebar-logout-icon">
-                <SidebarSvgIcon name="logout" size={18} />
+                <SidebarSvgIcon name="logout" size={16} />
               </span>
               {!compact ? <span>Log out</span> : null}
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className={cn(
-                "portal-sidebar-theme flex w-full items-center rounded-lg transition",
-                compact ? "justify-center p-2" : "gap-3 px-2.5 py-2",
-              )}
-            >
-              <span className="portal-sidebar-theme-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
-                <Icon icon={Moon} size={16} strokeWidth={1.8} />
-              </span>
-              {!compact ? (
-                <>
-                  <span className="font-sans min-w-0 flex-1 text-left text-sm font-medium tracking-[0.005em]">
-                    Dark mode
-                  </span>
-                  <span
-                    className="portal-theme-switch"
-                    data-on={theme === "dark" ? "true" : "false"}
-                    aria-hidden
-                  >
-                    <span className="portal-theme-switch-knob" />
-                  </span>
-                </>
-              ) : null}
             </button>
           </div>
 
@@ -495,6 +445,7 @@ export function PortalShell({
             <Icon icon={X} size={18} strokeWidth={2} />
           </button>
         </aside>
+        ) : null}
 
         <div
           className={cn(
@@ -505,11 +456,11 @@ export function PortalShell({
           style={
             {
               ...(brandBackdrop ? {} : { background: "var(--portal-page-bg)" }),
-              "--portal-sidebar-offset": collapsed ? "4.75rem" : "16rem",
+              ...(hideSidebar ? {} : { "--portal-sidebar-offset": collapsed ? "4.75rem" : "16rem" }),
             } as CSSProperties
           }
         >
-          {!contentFlush ? (
+          {!contentFlush && !hideSidebar ? (
             <div
               className={cn(
                 "pointer-events-none sticky top-0 z-20 px-3 pb-2 sm:px-4 md:px-6 lg:px-8",
@@ -573,5 +524,6 @@ export const portalIcons = {
   calculator: <PortalNavIcon name="calculator" />,
   adviser: <PortalNavIcon name="adviser" />,
   reports: <PortalNavIcon name="orders" />,
+  orders: <PortalNavIcon name="orders" />,
   notifications: <PortalNavIcon name="bell" />,
 };

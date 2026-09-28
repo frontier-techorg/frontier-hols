@@ -91,7 +91,7 @@ export function AdminDashboardCharts({ overview }: { overview: SalesOverview }) 
               },
             ]}
           />
-          <DashboardRecentActivity className="min-h-0 flex-1" />
+          <DashboardRecentActivity />
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-1">

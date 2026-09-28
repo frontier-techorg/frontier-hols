@@ -9,7 +9,7 @@ import {
 import type { Membership } from "@/lib/integrate/provider/student/payment/types";
 
 export const MEMBERSHIP_REQUIRED_CODE = "MEMBERSHIP_REQUIRED";
-export const MEMBERSHIP_PLANS_HREF = "/student/payment";
+export const MEMBERSHIP_PLANS_HREF = "/student/plans";
 
 export function isActiveMembership(membership: Membership | null | undefined): boolean {
   if (!membership) return false;

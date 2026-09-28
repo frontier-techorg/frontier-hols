@@ -14,7 +14,8 @@ type Block =
   | { type: "ol"; items: string[] }
   | { type: "quote"; text: string }
   | { type: "hr" }
-  | { type: "code"; text: string };
+  | { type: "code"; text: string }
+  | { type: "table"; headers: string[]; rows: string[][] };
 
 function renderInline(text: string): React.ReactNode[] {
   const pattern = /(\*\*[^*\n]+?\*\*|__[^_\n]+?__|`[^`\n]+?`|\[[^\]]+?\]\([^)]+?\)|\*[^*\n]+?\*|_[^_\n]+?_)/g;
@@ -32,7 +33,7 @@ function renderInline(text: string): React.ReactNode[] {
 
     if ((token.startsWith("**") && token.endsWith("**")) || (token.startsWith("__") && token.endsWith("__"))) {
       nodes.push(
-        <strong key={key++} className="font-semibold text-[color:var(--dash-text)]">
+        <strong key={key++} className="font-bold">
           {token.slice(2, -2)}
         </strong>,
       );
@@ -78,6 +79,25 @@ function renderInline(text: string): React.ReactNode[] {
   }
 
   return nodes.length > 0 ? nodes : [text];
+}
+
+function splitTableCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isTableRow(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith("|") && trimmed.endsWith("|") && splitTableCells(trimmed).length >= 2;
+}
+
+function isTableSeparator(line: string): boolean {
+  const cells = splitTableCells(line);
+  return cells.length >= 2 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
 function parseBlocks(content: string): Block[] {
@@ -133,6 +153,23 @@ function parseBlocks(content: string): Block[] {
       continue;
     }
 
+    if (
+      isTableRow(trimmed) &&
+      i + 1 < lines.length &&
+      isTableSeparator(lines[i + 1])
+    ) {
+      const headers = splitTableCells(trimmed);
+      i += 2;
+      const rows: string[][] = [];
+      while (i < lines.length && isTableRow(lines[i])) {
+        const cells = splitTableCells(lines[i]);
+        rows.push(headers.map((_, cellIndex) => cells[cellIndex] ?? ""));
+        i += 1;
+      }
+      blocks.push({ type: "table", headers, rows });
+      continue;
+    }
+
     if (/^[-*+]\s+/.test(trimmed)) {
       const items: string[] = [];
       while (i < lines.length && /^[-*+]\s+/.test(lines[i].trim())) {
@@ -164,6 +201,7 @@ function parseBlocks(content: string): Block[] {
         next.startsWith("```") ||
         /^[-*+]\s+/.test(next) ||
         /^\d+[.)]\s+/.test(next) ||
+        isTableRow(next) ||
         /^---+$/.test(next) ||
         /^\*\*\*+$/.test(next)
       ) {
@@ -204,7 +242,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
             return (
               <p
                 key={index}
-                className="text-brand-body text-left leading-[1.5] text-[color:var(--dash-text)]"
+                className="adviser-chat-copy text-left"
               >
                 {renderInline(block.text)}
               </p>
@@ -213,7 +251,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
             return (
               <ul
                 key={index}
-                className="text-brand-body my-1 list-disc space-y-1.5 pl-5 leading-[1.5] text-[color:var(--dash-text)] marker:text-[color:var(--dash-navy)]"
+                className="adviser-chat-copy my-1 list-disc space-y-1.5 pl-5 marker:text-[#0C2040]"
               >
                 {block.items.map((item, itemIndex) => (
                   <li key={itemIndex} className="pl-0.5 text-left">
@@ -226,7 +264,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
             return (
               <ol
                 key={index}
-                className="text-brand-body my-1 list-decimal space-y-1.5 pl-5 leading-[1.5] text-[color:var(--dash-text)] marker:font-medium marker:text-[color:var(--dash-navy)]"
+                className="adviser-chat-copy my-1 list-decimal space-y-1.5 pl-5 marker:font-medium marker:text-[#0C2040]"
               >
                 {block.items.map((item, itemIndex) => (
                   <li key={itemIndex} className="pl-0.5 text-left">
@@ -254,6 +292,29 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
               >
                 <code className="font-mono whitespace-pre">{block.text}</code>
               </pre>
+            );
+          case "table":
+            return (
+              <div key={index} className="overflow-x-auto">
+                <table className="adviser-chat-table">
+                  <thead>
+                    <tr>
+                      {block.headers.map((header, headerIndex) => (
+                        <th key={headerIndex}>{renderInline(header)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {block.rows.map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        {row.map((cell, cellIndex) => (
+                          <td key={cellIndex}>{renderInline(cell)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             );
           default:
             return null;

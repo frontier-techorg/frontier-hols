@@ -1,19 +1,20 @@
 "use client";
 
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon, Menu } from "@/components/icons";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
-import { StudentCardPanel } from "@/components/platform/provider/student/payment/StudentCardPage";
-import { StudentOrdersPanel } from "@/components/platform/provider/student/payment/StudentOrdersPage";
+import { StudentOrdersPage } from "@/components/platform/provider/student/payment/StudentOrdersPage";
+import { StudentPlansPage } from "@/components/platform/provider/student/payment/StudentPlansPage";
 import { SettingsProfilePanel } from "@/components/platform/provider/student/profile/SettingsProfilePanel";
 import {
   SETTINGS_NAV,
   type SettingsSection,
 } from "@/components/platform/provider/student/profile/settingsNav";
 import { studentNav } from "@/components/platform/provider/student/studentNav";
+import { cn } from "@/lib/utils";
 import { ApiRequestError } from "@/lib/integrate/client";
 import { getStoredUser, updateStoredProfile } from "@/lib/integrate/auth/storage";
 import {
@@ -23,8 +24,6 @@ import {
   type StudentAddress,
   type StudentProfile,
 } from "@/lib/integrate/provider/student/profile/api";
-import { cn } from "@/lib/utils";
-
 function openSidebar() {
   window.dispatchEvent(new Event("hols-portal-open-sidebar"));
 }
@@ -112,31 +111,27 @@ export function StudentSettingsPage({ section }: { section: SettingsSection }) {
   return (
     <PortalShell
       role="student"
-      title="Settings"
+      title="Profile"
       showPageHeader={false}
       contentFlush
       brandBackdrop
       nav={studentNav}
     >
       <div className="dashboard-screen lectures-page profile-page min-w-0 overflow-x-hidden">
-        <header className="mb-2 flex min-h-10 min-w-0 items-center gap-2 sm:mb-3 sm:min-h-12 sm:gap-3 md:gap-4">
+        <header className="mb-4 flex min-w-0 items-center gap-2 overflow-visible py-0.5 sm:mb-5 sm:gap-3">
           <button
             type="button"
             aria-label="Open sidebar"
             onClick={openSidebar}
-            className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden sm:h-12 sm:w-12"
+            className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden"
           >
             <Icon icon={Menu} size={18} />
           </button>
 
-          <h1 className="font-sans min-w-0 truncate text-lg font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
-            Settings
+          <h1 className="font-sans min-w-0 overflow-visible py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
+            Profile
           </h1>
         </header>
-
-        <p className="text-brand-body mb-4 max-w-2xl text-sm text-[color:var(--dash-muted)] sm:mb-5 sm:text-base">
-          Manage your profile, payment card, and orders.
-        </p>
 
         {photoError ? (
           <div className="mb-3 sm:mb-4">
@@ -151,100 +146,99 @@ export function StudentSettingsPage({ section }: { section: SettingsSection }) {
 
         <div className="grid w-full min-w-0 items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(15.5rem,18.75rem)_minmax(0,1fr)]">
             <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-3">
-              <section className="dashboard-glass-card flex flex-col items-center rounded-2xl px-4 py-5 text-center sm:p-5">
-                <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:h-24 sm:w-24 sm:text-xl">
-                  {avatarSrc ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+              <section className="flex min-w-0 flex-row items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white px-4 py-4 text-left shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:gap-4 sm:px-5 lg:flex-col lg:items-center lg:px-4 lg:py-5 lg:text-center">
+                {profile ? (
+                  <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:h-20 sm:w-20 lg:h-24 lg:w-24 lg:text-xl">
+                    {avatarSrc ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      initials(profile)
+                    )}
+                  </span>
+                ) : (
+                  <span className="dashboard-skeleton-block h-16 w-16 shrink-0 rounded-full sm:h-20 sm:w-20 lg:h-24 lg:w-24" />
+                )}
+
+                <div className="flex min-w-0 flex-1 flex-col items-start lg:items-center">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="sr-only"
+                    onChange={(event) => void onPickPhoto(event.target.files?.[0] ?? null)}
+                  />
+
+                  {profile ? (
+                    <>
+                      <p className="font-sans w-full truncate text-base font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-lg">
+                        {fullName}
+                      </p>
+                      <p className="text-brand-caption mt-1 w-full truncate text-[color:var(--dash-muted)]">
+                        {profile.email || "—"}
+                      </p>
+                      <span className="mt-2 inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 text-brand-caption font-semibold text-[color:var(--dash-muted)]">
+                        Student
+                      </span>
+                    </>
                   ) : (
-                    initials(profile)
+                    <div className="w-full space-y-2 lg:flex lg:flex-col lg:items-center" aria-hidden>
+                      <span className="dashboard-skeleton-block block h-5 w-36 max-w-full rounded-full" />
+                      <span className="dashboard-skeleton-block block h-3.5 w-48 max-w-full rounded-full" />
+                      <span className="dashboard-skeleton-block block h-6 w-16 rounded-full" />
+                    </div>
                   )}
-                </span>
 
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="sr-only"
-                  onChange={(event) => void onPickPhoto(event.target.files?.[0] ?? null)}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto || !profile}
-                  className="dashboard-pill-soft font-sans mt-3 inline-flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] transition disabled:opacity-60 sm:min-h-10"
-                >
-                  {uploadingPhoto ? "Uploading…" : "Change photo"}
-                </button>
-
-                <p className="font-sans mt-3 max-w-full break-words text-base font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-lg">
-                  {fullName}
-                </p>
-                <p className="text-brand-caption mt-1 max-w-full break-all text-[color:var(--dash-muted)]">
-                  {profile?.email || "—"}
-                </p>
-                <span className="mt-3 inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 text-brand-caption font-semibold text-[color:var(--dash-muted)]">
-                  Student
-                </span>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingPhoto || !profile}
+                    className="lecture-page-action dashboard-navy-btn font-sans mt-3 inline-flex h-10 min-h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
+                  >
+                    {uploadingPhoto ? "Uploading…" : "Change photo"}
+                  </button>
+                </div>
               </section>
 
               <nav
-                aria-label="Settings sections"
-                className="grid grid-cols-3 gap-1.5 lg:hidden"
+                aria-label="Profile sections"
+                className="dashboard-glass-card rounded-2xl p-2"
               >
-                {SETTINGS_NAV.map((item) => {
-                  const active = item.id === section;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "portal-nav-item font-sans inline-flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-2xl px-1.5 text-xs font-medium tracking-[0.005em] sm:min-h-10 sm:gap-1.5 sm:px-3 sm:text-sm",
-                        active && "is-active",
-                      )}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      <SidebarSvgIcon
-                        name={item.icon}
-                        size={15}
-                        strokeWidth={1.9}
-                        className={cn("portal-nav-icon shrink-0", !active && "text-[color:var(--dash-muted)]")}
-                      />
-                      <span className="truncate">{item.shortLabel}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              <section className="dashboard-glass-card hidden rounded-2xl p-2 sm:p-2.5 lg:block">
-                <nav aria-label="Settings sections" className="space-y-0.5">
+                <ul className="m-0 grid list-none grid-cols-3 gap-1 p-0 lg:grid-cols-1">
                   {SETTINGS_NAV.map((item) => {
                     const active = item.id === section;
                     return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={cn(
-                          "portal-nav-item font-sans flex h-12 min-w-0 items-center gap-3 rounded-2xl px-3.5 text-sm font-medium tracking-[0.005em] md:text-base",
-                          active && "is-active",
-                        )}
-                        aria-current={active ? "page" : undefined}
-                      >
-                        <span className="portal-nav-icon flex h-5 w-5 shrink-0 items-center justify-center">
-                          <SidebarSvgIcon name={item.icon} size={18} strokeWidth={1.9} />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      </Link>
+                      <li key={item.id}>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "portal-nav-item font-sans flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-2xl px-2 text-sm font-medium tracking-[0.005em] lg:h-12 lg:justify-start lg:gap-3 lg:px-3.5",
+                            active && "is-active",
+                          )}
+                          aria-current={active ? "page" : undefined}
+                        >
+                          <span className="portal-nav-icon flex h-5 w-5 shrink-0 items-center justify-center">
+                            <SidebarSvgIcon name={item.icon} size={18} strokeWidth={1.9} />
+                          </span>
+                          <span className="min-w-0 truncate">{item.shortLabel}</span>
+                        </Link>
+                      </li>
                     );
                   })}
-                </nav>
-              </section>
+                </ul>
+              </nav>
             </aside>
 
             <div className="min-w-0">
-              {section === "profile" ? <SettingsProfilePanel onProfileChange={applyProfile} /> : null}
-              {section === "card" ? <StudentCardPanel /> : null}
-              {section === "orders" ? <StudentOrdersPanel /> : null}
+              {section === "plan" ? (
+                <Suspense fallback={null}>
+                  <StudentPlansPage />
+                </Suspense>
+              ) : section === "order" ? (
+                <StudentOrdersPage />
+              ) : (
+                <SettingsProfilePanel onProfileChange={applyProfile} />
+              )}
             </div>
           </div>
       </div>

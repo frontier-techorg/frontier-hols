@@ -5,6 +5,5 @@ export { AdminUserDetailPage } from "@/components/platform/provider/admin/users/
 export { AdminPlansPage } from "@/components/platform/provider/admin/payment/AdminPlansPage";
 export { AdminPayoutPage } from "@/components/platform/provider/admin/payout/AdminPayoutPage";
 export { AdminReportsPage } from "@/components/platform/provider/admin/reports/AdminReportsPage";
-export { NotificationsPage } from "@/components/platform/provider/notifications/NotificationsPage";
 export { AdminSettingsPage, AdminProfilePage } from "@/components/platform/provider/admin/profile/AdminSettingsPage";
 export { adminNav } from "@/components/platform/provider/admin/adminNav";

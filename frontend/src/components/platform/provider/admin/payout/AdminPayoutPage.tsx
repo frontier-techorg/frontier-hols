@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icon, Menu } from "@/components/icons";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
-import { DataField, DirectoryMobileRow, StatusBadge } from "@/components/platform/provider/admin/shared";
+import {
+  DataField,
+  DirectoryMobileRow,
+  PaginationControls,
+  StatusBadge,
+} from "@/components/platform/provider/admin/shared";
 import { adminNav } from "@/components/platform/provider/admin/adminNav";
 import {
   FinanceOverviewCard,
@@ -46,46 +51,38 @@ function affiliateLabel(item: AdminPayoutItem) {
   return item.affiliate_name?.trim() || item.affiliate_email?.trim() || "Affiliate";
 }
 
-function mergePayoutRows(overview: AdminPayoutOverview | null): AdminPayoutItem[] {
-  if (!overview) return [];
-  const byId = new Map<string, AdminPayoutItem>();
-  for (const item of [...overview.pending, ...overview.items]) {
-    if (!item.payout_id || byId.has(item.payout_id)) continue;
-    byId.set(item.payout_id, item);
-  }
-  return [...byId.values()].sort((left, right) => {
-    const leftPending = left.status === "pending" ? 0 : 1;
-    const rightPending = right.status === "pending" ? 0 : 1;
-    if (leftPending !== rightPending) return leftPending - rightPending;
-    return (right.created_at || "").localeCompare(left.created_at || "");
-  });
-}
+const PAGE_SIZE = 15;
 
 export function AdminPayoutPage() {
   const [overview, setOverview] = useState<AdminPayoutOverview | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState<AdminPayoutReviewAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<AdminPayoutItem | null>(null);
   const { finance, currency: financeCurrency, loading: financeLoading } = useAdminFinance();
 
   const currency = overview?.currency ?? "USD";
-  const payouts = useMemo(() => mergePayoutRows(overview), [overview]);
-  const busy = loading && !overview;
-  const selected = payouts.find((item) => item.payout_id === selectedId) ?? null;
+  const payouts = overview?.items ?? [];
+  const total = overview?.pagination.total ?? 0;
+  const busy = loading && payouts.length === 0;
 
-  async function loadPayouts(signal?: AbortSignal) {
-    const data = await listAdminPayouts(signal);
+  const loadPayouts = useCallback(async (pageNum: number, signal?: AbortSignal) => {
+    const data = await listAdminPayouts({ page: pageNum, limit: PAGE_SIZE }, signal);
     if (signal?.aborted) return;
     setOverview(data);
-  }
+    const lastPage = Math.max(1, data.pagination.total_pages || 1);
+    if (data.pagination.total > 0 && pageNum > lastPage) {
+      setPage(lastPage);
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    void loadPayouts(controller.signal)
+    void loadPayouts(page, controller.signal)
       .catch((err) => {
         if (controller.signal.aborted) return;
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -95,7 +92,7 @@ export function AdminPayoutPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [loadPayouts, page]);
 
   async function handleReview(payout: AdminPayoutItem, action: AdminPayoutReviewAction) {
     setReviewing(action);
@@ -103,7 +100,10 @@ export function AdminPayoutPage() {
     setSuccess(null);
     try {
       const result = await reviewAdminPayout(payout.payout_id, action);
-      await loadPayouts();
+      setSelected((current) =>
+        current?.payout_id === result.payout.payout_id ? result.payout : current,
+      );
+      await loadPayouts(page);
       notifyAdminStatsChanged();
       setSuccess(
         action === "accept"
@@ -126,7 +126,7 @@ export function AdminPayoutPage() {
       brandBackdrop
       nav={adminNav}
     >
-      <div className="dashboard-screen lectures-page min-w-0 overflow-x-hidden">
+      <div className="dashboard-screen lectures-page orders-page min-w-0 overflow-x-hidden">
         <header className="mb-4 flex min-h-10 min-w-0 items-center gap-2 sm:mb-5 sm:min-h-12 sm:gap-3 md:gap-4">
           <button
             type="button"
@@ -161,7 +161,7 @@ export function AdminPayoutPage() {
                   Payouts
                 </h2>
               </div>
-              <p className="text-brand-caption text-[color:var(--dash-faint)]">{payouts.length} total</p>
+              <p className="text-brand-caption text-[color:var(--dash-faint)]">{total} total</p>
             </div>
 
             {busy ? (
@@ -190,12 +190,13 @@ export function AdminPayoutPage() {
                     <DirectoryMobileRow
                       title={affiliateLabel(item)}
                       subtitle={formatDate(item.created_at ?? undefined)}
-                      active={selectedId === item.payout_id}
+                      active={selected?.payout_id === item.payout_id}
                       ariaLabel={`Open payout ${formatMoney(item.amount, item.currency || currency)}`}
-                      onClick={() => setSelectedId(item.payout_id)}
+                      onClick={() => setSelected(item)}
                       stats={[
                         { label: "Status", value: statusLabel(item.status) },
                         { label: "Amount", value: formatMoney(item.amount, item.currency || currency) },
+                        { label: "Action", value: <span className="portal-action-link">View</span> },
                       ]}
                     />
                   </li>
@@ -214,17 +215,17 @@ export function AdminPayoutPage() {
                       <th scope="col" className="px-3 py-3 font-semibold">
                         Status
                       </th>
-                      <th scope="col" className="px-3 py-3 text-right font-semibold">
+                      <th scope="col" className="px-3 py-3 font-semibold">
                         Amount
                       </th>
-                      <th scope="col" className="px-4 py-3 text-right font-semibold sm:px-5">
-                        <span className="sr-only">Open</span>
+                      <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                        Action
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {payouts.map((item) => {
-                      const active = selectedId === item.payout_id;
+                      const active = selected?.payout_id === item.payout_id;
                       return (
                         <tr
                           key={item.payout_id}
@@ -232,14 +233,14 @@ export function AdminPayoutPage() {
                           role="button"
                           aria-label={`Open payout ${formatMoney(item.amount, item.currency || currency)}`}
                           className={cn(
-                            "cursor-pointer outline-none transition focus-visible:bg-[color:var(--dash-soft)]",
+                            "orders-table-row cursor-pointer outline-none transition focus-visible:bg-[color:var(--dash-soft)]",
                             active ? "bg-[color:var(--dash-soft)]" : "hover:bg-[color:var(--dash-soft)]",
                           )}
-                          onClick={() => setSelectedId(item.payout_id)}
+                          onClick={() => setSelected(item)}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              setSelectedId(item.payout_id);
+                              setSelected(item);
                             }
                           }}
                         >
@@ -258,16 +259,13 @@ export function AdminPayoutPage() {
                               {statusLabel(item.status)}
                             </span>
                           </td>
-                          <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3 text-right">
-                            <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                          <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                            <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
                               {formatMoney(item.amount, item.currency || currency)}
                             </span>
                           </td>
-                          <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 text-right sm:px-5">
-                            <span className="inline-flex items-center justify-end gap-1 text-brand-caption font-medium text-[color:var(--dash-accent)]">
-                              View
-                              <SidebarSvgIcon name="next" size={14} />
-                            </span>
+                          <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                            <span className="portal-action-link">View</span>
                           </td>
                         </tr>
                       );
@@ -277,6 +275,22 @@ export function AdminPayoutPage() {
               </div>
               </>
             )}
+
+            {(Boolean(overview?.pagination.has_next) || Boolean(overview?.pagination.has_previous) || page > 1) ? (
+              <div className="px-4 pb-4 sm:px-5">
+                <PaginationControls
+                  appearance="lecture"
+                  page={overview?.pagination.page ?? page}
+                  pageCount={Math.max(1, overview?.pagination.total_pages ?? 1)}
+                  total={total}
+                  hasNext={Boolean(overview?.pagination.has_next)}
+                  hasPrevious={Boolean(overview?.pagination.has_previous)}
+                  loading={loading}
+                  onPrevious={() => setPage((current) => Math.max(1, current - 1))}
+                  onNext={() => setPage((current) => current + 1)}
+                />
+              </div>
+            ) : null}
           </section>
         </div>
       </div>
@@ -285,7 +299,7 @@ export function AdminPayoutPage() {
         <DashRightDrawer
           eyebrow="Payout"
           title={formatMoney(selected.amount, selected.currency || currency)}
-          onClose={() => setSelectedId(null)}
+          onClose={() => setSelected(null)}
         >
           <AdminPayoutDetailPanel
             payout={selected}
@@ -345,7 +359,7 @@ function AdminPayoutDetailPanel({
             type="button"
             disabled={busy}
             onClick={() => onReview("reject")}
-            className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
           >
             {reviewing === "reject" ? (
               <>
@@ -360,7 +374,7 @@ function AdminPayoutDetailPanel({
             type="button"
             disabled={busy}
             onClick={() => onReview("accept")}
-            className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
           >
             {reviewing === "accept" ? (
               <>

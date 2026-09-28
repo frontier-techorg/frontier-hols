@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon, Menu } from "@/components/icons";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { adminNav } from "@/components/platform/provider/admin/adminNav";
+import { AdminPlansPage } from "@/components/platform/provider/admin/payment/AdminPlansPage";
 import { AdminSettingsProfilePanel } from "@/components/platform/provider/admin/profile/AdminSettingsProfilePanel";
 import { AdminSettingsPayoutPanel } from "@/components/platform/provider/admin/profile/AdminSettingsPayoutPanel";
 import {
@@ -111,27 +112,21 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
       brandBackdrop
       nav={adminNav}
     >
-      <div className="dashboard-screen lectures-page min-w-0 overflow-x-hidden">
-        <header className="mb-2 flex min-h-10 min-w-0 items-center gap-2 sm:mb-3 sm:min-h-12 sm:gap-3 md:gap-4">
+      <div className="dashboard-screen lectures-page profile-page min-w-0">
+        <header className="mb-4 flex min-w-0 items-center gap-2 overflow-visible py-0.5 sm:mb-5 sm:gap-3">
           <button
             type="button"
             aria-label="Open sidebar"
             onClick={openSidebar}
-            className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden sm:h-12 sm:w-12"
+            className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden"
           >
             <Icon icon={Menu} size={18} />
           </button>
 
-          <h1 className="font-sans min-w-0 truncate text-lg font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
+          <h1 className="font-sans min-w-0 overflow-visible py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
             Settings
           </h1>
         </header>
-
-        <p className="text-brand-body mb-4 max-w-2xl text-sm leading-relaxed text-[color:var(--dash-muted)] sm:mb-5 sm:text-base">
-          {section === "payout"
-            ? "Set how long new affiliate commission stays locked before payout."
-            : "Manage your profile."}
-        </p>
 
         {photoError ? (
           <div className="mb-3 sm:mb-4">
@@ -146,7 +141,7 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
 
         <div className="grid w-full min-w-0 items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(15.5rem,18.75rem)_minmax(0,1fr)]">
           <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-3">
-            <section className="dashboard-glass-card flex flex-col items-center rounded-2xl px-4 py-5 text-center sm:p-5">
+            <section className="flex flex-col items-center rounded-2xl border border-[color:var(--dash-surface-border)] bg-white px-4 py-5 text-center shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5">
               <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:h-24 sm:w-24 sm:text-xl">
                 {avatarSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -167,7 +162,7 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingPhoto || !profile}
-                className="text-brand-caption mt-3 font-medium text-[color:var(--dash-muted)] transition hover:text-[color:var(--dash-text)] disabled:opacity-60"
+                className="lecture-page-action dashboard-navy-btn font-sans mt-3 inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50"
               >
                 {uploadingPhoto ? "Uploading…" : "Change photo"}
               </button>
@@ -183,61 +178,36 @@ export function AdminSettingsPage({ section }: { section: AdminSettingsSection }
               </span>
             </section>
 
-            <nav
-              aria-label="Settings sections"
-              className="grid w-full min-w-0 grid-cols-2 gap-1.5 lg:hidden"
-            >
-              {ADMIN_SETTINGS_NAV.map((item) => {
-                const active = item.id === section;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "portal-nav-item font-sans inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-2xl px-3 text-sm font-medium tracking-[0.005em]",
-                      active && "is-active",
-                    )}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <SidebarSvgIcon
-                      name={item.icon}
-                      size={15}
-                      strokeWidth={1.9}
-                      className={cn("portal-nav-icon", !active && "text-[color:var(--dash-muted)]")}
-                    />
-                    {item.shortLabel}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <section className="dashboard-glass-card hidden rounded-2xl p-2 sm:p-2.5 lg:block">
-              <nav aria-label="Settings sections" className="space-y-0.5">
+            <nav aria-label="Settings sections" className="dashboard-glass-card rounded-2xl p-2">
+              <ul className="m-0 grid list-none gap-1 p-0">
                 {ADMIN_SETTINGS_NAV.map((item) => {
                   const active = item.id === section;
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "portal-nav-item font-sans flex h-12 min-w-0 items-center gap-3 rounded-2xl px-3.5 text-sm font-medium tracking-[0.005em] md:text-base",
-                        active && "is-active",
-                      )}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      <span className="portal-nav-icon flex h-5 w-5 shrink-0 items-center justify-center">
-                        <SidebarSvgIcon name={item.icon} size={18} strokeWidth={1.9} />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    </Link>
+                    <li key={item.id}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "portal-nav-item font-sans flex h-12 min-w-0 items-center gap-3 rounded-2xl px-3.5 text-sm font-medium tracking-[0.005em]",
+                          active && "is-active",
+                        )}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        <span className="portal-nav-icon flex h-5 w-5 shrink-0 items-center justify-center">
+                          <SidebarSvgIcon name={item.icon} size={18} strokeWidth={1.9} />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      </Link>
+                    </li>
                   );
                 })}
-              </nav>
-            </section>
+              </ul>
+            </nav>
           </aside>
 
           <div className="min-w-0">
-            {section === "payout" ? (
+            {section === "plan" ? (
+              <AdminPlansPage />
+            ) : section === "payout" ? (
               <AdminSettingsPayoutPanel />
             ) : (
               <AdminSettingsProfilePanel onProfileChange={applyProfile} />

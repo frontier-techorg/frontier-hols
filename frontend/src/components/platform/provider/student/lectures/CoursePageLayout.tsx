@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo } from "react";
-import { ArrowLeft, Icon, Menu } from "@/components/icons";
+import { Icon, Menu } from "@/components/icons";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
+import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import {
   CourseOptionNav,
   type CourseOption,
@@ -82,29 +83,31 @@ export function CoursePageLayout({
         nav={studentNav}
       >
         <div className="dashboard-screen lectures-page min-w-0 overflow-x-hidden">
-          <header className="mb-3 flex min-h-11 min-w-0 items-center gap-2 sm:mb-4 sm:min-h-12 sm:gap-3 md:mb-5 md:gap-4">
+          <header className="mb-3 flex min-h-10 min-w-0 items-center gap-2">
             <button
               type="button"
               aria-label="Open sidebar"
               onClick={openSidebar}
-              className="dashboard-icon-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-full lg:hidden sm:h-12 sm:w-12"
+              className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden"
             >
               <Icon icon={Menu} size={18} />
             </button>
 
-            {backHref ? (
-              <Link
-                href={backHref}
-                aria-label={backLabel ?? "Back"}
-                className="dashboard-navy-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-full no-underline sm:h-12 sm:w-12"
-              >
-                <Icon icon={ArrowLeft} size={18} strokeWidth={2.4} />
-              </Link>
-            ) : null}
+            <div className="flex min-w-0 items-center gap-0.5">
+              {backHref ? (
+                <Link
+                  href={backHref}
+                  aria-label={backLabel ?? "Back"}
+                  className="lecture-back-btn flex h-10 w-8 shrink-0 items-center justify-center rounded-full no-underline"
+                >
+                  <SidebarSvgIcon name="back" size={32} className="lecture-back-mark" />
+                </Link>
+              ) : null}
 
-            <h1 className="font-sans min-w-0 flex-1 truncate text-lg font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
-              Lectures
-            </h1>
+              <h1 className="font-sans min-w-0 overflow-visible py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
+                Lectures
+              </h1>
+            </div>
           </header>
 
           {courseId && courseNavActive ? (

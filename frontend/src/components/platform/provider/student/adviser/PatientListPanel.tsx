@@ -1,17 +1,19 @@
 "use client";
 
 import { type ReactNode } from "react";
-import Link from "next/link";
 import {
   DirectoryMobileRow,
-  DirectoryNativeSelect,
   DirectorySearchBar,
   PaginationControls,
 } from "@/components/platform/provider/admin/shared";
+import { AdviserPatientRowsSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
 import type { PatientSummary } from "@/lib/integrate/provider/student/chat";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
-import { MEMBERSHIP_PLANS_HREF } from "@/lib/integrate/provider/student/payment/membershipAccess";
 import { cn } from "@/lib/utils";
+
+const ACTION_LINK_CLASS =
+  "font-sans text-sm font-semibold text-[#142644] underline decoration-[rgba(20,38,68,0.45)] decoration-1 underline-offset-[3px] transition-colors hover:text-[#6f7a1c] hover:decoration-[#6f7a1c] focus-visible:text-[#6f7a1c] focus-visible:decoration-[#6f7a1c] focus-visible:outline-none bg-transparent border-0 p-0 cursor-pointer";
 
 export type StatusFilter = "all" | "progress" | "chat";
 export type SortFilter = "newest" | "oldest";
@@ -55,13 +57,6 @@ function statusLabel(patient: PatientSummary) {
   return isChatCase(patient) ? "Chat" : "In progress";
 }
 
-function patientInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "P";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
-}
-
 export function PatientListPanel({
   patients,
   activePatientId,
@@ -103,19 +98,23 @@ export function PatientListPanel({
         : "No patients yet";
 
   return (
-    <div className="grid min-w-0 gap-3 sm:gap-4">
-      <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+    <div className="@container grid min-w-0 gap-3 sm:gap-4">
+      <div className="flex w-full min-w-0 flex-col gap-2 @min-[54rem]:flex-row @min-[54rem]:items-center @min-[54rem]:gap-3">
         <DirectorySearchBar
           value={searchQuery}
           onChange={onSearchChange}
           placeholder="Search patients…"
           label="Search patients"
-          className="mt-0 w-full min-w-0 sm:max-w-[22rem] sm:shrink-0"
+          className="mt-0 w-full min-w-0 @min-[54rem]:max-w-[22rem] @min-[54rem]:shrink-0"
         />
-        <div className="grid min-w-0 grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto sm:items-center">
-          <DirectoryNativeSelect
+        <div className="grid min-w-0 grid-cols-2 gap-2 @min-[54rem]:ml-auto @min-[54rem]:flex @min-[54rem]:w-auto @min-[54rem]:items-center">
+          <ProfileSelect
             id="adviser-patient-status-filter"
             label="Filter patients"
+            hideLabel
+            className="w-full @min-[54rem]:w-[9.75rem]"
+            portalToBody
+            menuZIndex={120}
             value={filter}
             onChange={(value) =>
               onFilterChange(value === "progress" || value === "chat" ? value : "all")
@@ -126,9 +125,13 @@ export function PatientListPanel({
               { value: "chat", label: "Chat" },
             ]}
           />
-          <DirectoryNativeSelect
+          <ProfileSelect
             id="adviser-patient-sort-filter"
             label="Sort patients"
+            hideLabel
+            className="w-full @min-[54rem]:w-[9.75rem]"
+            portalToBody
+            menuZIndex={120}
             value={sort}
             onChange={(value) => onSortChange(value === "oldest" ? "oldest" : "newest")}
             options={[
@@ -141,7 +144,7 @@ export function PatientListPanel({
           type="button"
           onClick={onCreate}
           disabled={isCreating}
-          className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white disabled:pointer-events-none disabled:opacity-60 sm:min-h-10 sm:w-auto"
+          className="dashboard-navy-btn lecture-page-action font-sans inline-flex h-10 min-h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white disabled:pointer-events-none disabled:opacity-60 @min-[54rem]:w-auto"
         >
           <SidebarSvgIcon name="plus" size={15} strokeWidth={2.2} />
           {isCreating ? "Creating…" : "New patient"}
@@ -152,15 +155,10 @@ export function PatientListPanel({
 
       <section className="dashboard-glass-card min-w-0 overflow-hidden rounded-2xl">
         {listLoading && patients.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <p className="text-brand-caption text-[color:var(--dash-faint)]">Loading patients…</p>
-          </div>
+          <AdviserPatientRowsSkeleton />
         ) : total === 0 && !needle && filter === "all" ? (
           <div className="flex flex-col items-center px-5 py-12 text-center sm:py-14">
-            <span className="dashboard-tool-icon flex h-14 w-14 items-center justify-center rounded-full text-[color:var(--dash-text)]">
-              <SidebarSvgIcon name="adviser" size={22} strokeWidth={1.85} />
-            </span>
-            <p className="font-sans mt-4 text-base font-semibold text-[color:var(--dash-text)] sm:text-lg">
+            <p className="font-sans text-base font-semibold text-[color:var(--dash-text)] sm:text-lg">
               No patients yet
             </p>
             <p className="text-brand-body mt-1.5 max-w-sm text-[color:var(--dash-muted)]">
@@ -184,13 +182,13 @@ export function PatientListPanel({
               const active = activePatientId === patient.patient_id;
               const chat = isChatCase(patient);
               const rowLocked = chatLocked && chat;
+              const actionLabel = rowLocked ? "Unlock" : chat ? "Open" : "Continue";
               return (
                 <li key={patient.patient_id} className="min-w-0">
                   <DirectoryMobileRow
                     title={patient.display_name}
                     subtitle={rowLocked ? "Membership required" : detailFor(patient)}
                     wrapSubtitle
-                    avatar={patientInitials(patient.display_name)}
                     active={active}
                     ariaLabel={`${patient.display_name}, ${statusLabel(patient)}. ${
                       rowLocked
@@ -204,33 +202,37 @@ export function PatientListPanel({
                       { label: "Status", value: statusLabel(patient) },
                       { label: "Messages", value: patient.message_count },
                       { label: "Updated", value: formatUpdated(patient.updated_at) },
+                      {
+                        label: "Action",
+                        value: <span className={ACTION_LINK_CLASS}>{actionLabel}</span>,
+                      },
                     ]}
                   />
                 </li>
               );
             })}
           </ul>
-          <div className="hidden min-w-0 overflow-x-auto md:block">
-            <table className="w-full min-w-[40rem] border-separate border-spacing-0 text-left">
+          <div className="hidden min-w-0 overflow-hidden md:block">
+            <table className="w-full table-fixed border-separate border-spacing-0 text-left">
               <thead>
                 <tr className="bg-[color:var(--dash-soft)] text-brand-caption font-semibold uppercase tracking-[0.06em] text-[color:var(--dash-faint)]">
-                  <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                  <th scope="col" className="w-[22%] px-4 py-3 font-semibold sm:px-5">
                     Patient
                   </th>
-                  <th scope="col" className="px-3 py-3 font-semibold">
+                  <th scope="col" className="w-[14%] px-3 py-3 font-semibold">
                     Status
                   </th>
-                  <th scope="col" className="px-3 py-3 font-semibold">
+                  <th scope="col" className="w-[24%] px-3 py-3 font-semibold">
                     Details
                   </th>
-                  <th scope="col" className="px-3 py-3 font-semibold">
+                  <th scope="col" className="w-[12%] px-3 py-3 font-semibold">
                     Messages
                   </th>
-                  <th scope="col" className="px-3 py-3 font-semibold">
+                  <th scope="col" className="w-[16%] px-3 py-3 font-semibold">
                     Updated
                   </th>
-                  <th scope="col" className="px-4 py-3 text-right font-semibold sm:px-5">
-                    <span className="sr-only">Open</span>
+                  <th scope="col" className="w-[12%] px-4 py-3 font-semibold sm:px-5">
+                    Action
                   </th>
                 </tr>
               </thead>
@@ -239,6 +241,7 @@ export function PatientListPanel({
                   const active = activePatientId === patient.patient_id;
                   const chat = isChatCase(patient);
                   const rowLocked = chatLocked && chat;
+                  const actionLabel = rowLocked ? "Unlock" : chat ? "Open" : "Continue";
                   return (
                     <tr
                       key={patient.patient_id}
@@ -252,7 +255,7 @@ export function PatientListPanel({
                             : "Continue intake"
                       }`}
                       className={cn(
-                        "cursor-pointer outline-none transition focus-visible:bg-[color:var(--dash-soft)]",
+                        "adviser-table-row cursor-pointer outline-none transition focus-visible:bg-[color:var(--dash-soft)]",
                         active ? "bg-[color:var(--dash-soft)]" : "hover:bg-[color:var(--dash-soft)]",
                       )}
                       onClick={() => {
@@ -266,51 +269,42 @@ export function PatientListPanel({
                       }}
                     >
                       <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span className="dashboard-tool-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)]">
-                            <SidebarSvgIcon name={chat ? "adviser" : "profile"} size={15} strokeWidth={1.9} />
-                          </span>
-                          <span className="font-sans min-w-0 truncate text-sm font-semibold text-[color:var(--dash-text)]">
-                            {patient.display_name}
-                          </span>
-                        </div>
+                        <span className="font-sans block truncate text-sm font-semibold text-[color:var(--dash-text)]">
+                          {patient.display_name}
+                        </span>
                       </td>
                       <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                        <span className="text-brand-caption inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
+                        <span className="text-brand-caption inline-flex max-w-full truncate rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
                           {statusLabel(patient)}
                         </span>
                       </td>
                       <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                        <span className="text-brand-caption block max-w-[16rem] truncate text-[color:var(--dash-muted)]">
+                        <span className="text-brand-caption block truncate text-[color:var(--dash-muted)]">
                           {detailFor(patient)}
                         </span>
                       </td>
                       <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                        <span className="font-sans text-sm tabular-nums text-[color:var(--dash-text)]">
+                        <span className="font-sans block text-sm tabular-nums text-[color:var(--dash-text)]">
                           {patient.message_count}
                         </span>
                       </td>
                       <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                        <span className="text-brand-caption whitespace-nowrap text-[color:var(--dash-muted)]">
+                        <span className="text-brand-caption block truncate text-[color:var(--dash-muted)]">
                           {formatUpdated(patient.updated_at)}
                         </span>
                       </td>
-                      <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 text-right sm:px-5">
-                        {rowLocked ? (
-                          <Link
-                            href={MEMBERSHIP_PLANS_HREF}
-                            className="inline-flex items-center justify-end gap-1 text-brand-caption font-medium text-[color:var(--dash-navy)]"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <SidebarSvgIcon name="lock" size={14} />
-                            Unlock chat
-                          </Link>
-                        ) : (
-                          <span className="inline-flex items-center justify-end gap-1 text-brand-caption font-medium text-[color:var(--dash-navy)]">
-                            {chat ? "Open" : "Continue"}
-                            <SidebarSvgIcon name="next" size={14} />
-                          </span>
-                        )}
+                      <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                        <button
+                          type="button"
+                          className={cn(ACTION_LINK_CLASS, rowLocked && "inline-flex items-center gap-1")}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onSelect(patient.patient_id);
+                          }}
+                        >
+                          {rowLocked ? <SidebarSvgIcon name="lock" size={14} /> : null}
+                          {actionLabel}
+                        </button>
                       </td>
                     </tr>
                   );
@@ -320,9 +314,10 @@ export function PatientListPanel({
           </div>
           </>
         )}
-        {total > 0 ? (
+        {total > 0 && (hasNext || hasPrevious) ? (
           <div className="px-3.5 pb-4 sm:px-5">
             <PaginationControls
+              appearance="lecture"
               page={page}
               total={total}
               hasNext={hasNext}

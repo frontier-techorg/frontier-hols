@@ -7,6 +7,8 @@ import { Icon, Menu } from "@/components/icons";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
 import { PaginationControls } from "@/components/platform/provider/admin/shared";
 import { adminNav } from "@/components/platform/provider/admin/adminNav";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
+import { Button } from "@/components/ui/Button";
 import {
   WebinarCoverPicker,
   WebinarDateTimeField,
@@ -215,7 +217,7 @@ export function AdminWebinarDetailPage({ webinarId }: { webinarId: string }) {
       brandBackdrop
       nav={adminNav}
     >
-      <div className="dashboard-screen lectures-page min-w-0 overflow-x-hidden">
+      <div className="dashboard-screen lectures-page webinars-page min-w-0 overflow-x-hidden">
         <header className="mb-4 flex min-h-10 min-w-0 items-center gap-2 sm:mb-5 sm:min-h-12 sm:gap-3 md:gap-4">
           <button
             type="button"
@@ -228,9 +230,9 @@ export function AdminWebinarDetailPage({ webinarId }: { webinarId: string }) {
           <Link
             href="/admin/webinars"
             aria-label="Back to webinars"
-            className="adviser-chat-back-btn dashboard-navy-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full no-underline sm:h-12 sm:w-12"
+            className="webinar-back-btn flex h-10 w-8 shrink-0 items-center justify-center rounded-full no-underline"
           >
-            <SidebarSvgIcon name="previous" size={18} strokeWidth={2.4} />
+            <SidebarSvgIcon name="back" size={32} className="webinar-back-mark" />
           </Link>
           <div className="min-w-0 flex-1">
             <h1 className="font-sans min-w-0 truncate text-lg font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
@@ -300,21 +302,16 @@ export function AdminWebinarDetailPage({ webinarId }: { webinarId: string }) {
                           value={startsAt}
                           onChange={setStartsAt}
                         />
-                        <label className="grid min-w-0 gap-2">
-                          <span className="dashboard-field-label">Status</span>
-                          <select
-                            value={status}
-                            disabled={saving || uploadingThumb}
-                            onChange={(event) => setStatus(event.target.value as WebinarStatus)}
-                            className="dashboard-field dashboard-field-select"
-                          >
-                            {WEBINAR_STATUS_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                        <ProfileSelect
+                          id="admin-webinar-status"
+                          label="Status"
+                          value={status}
+                          disabled={saving || uploadingThumb}
+                          onChange={(value) => {
+                            if (isWebinarStatus(value)) setStatus(value);
+                          }}
+                          options={[...WEBINAR_STATUS_OPTIONS]}
+                        />
                       </div>
                     </div>
                   </div>
@@ -385,17 +382,17 @@ export function AdminWebinarDetailPage({ webinarId }: { webinarId: string }) {
                   <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2.5">
                     <Link
                       href="/admin/webinars"
-                      className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium sm:min-h-10 sm:w-auto"
+                      className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 min-h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium sm:w-auto"
                     >
                       Back
                     </Link>
-                    <button
+                    <Button
                       type="submit"
                       disabled={saving || uploadingThumb}
-                      className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-semibold text-white disabled:opacity-60 sm:min-h-10 sm:w-auto"
+                      className="lecture-page-action w-full px-5 sm:w-auto"
                     >
                       {saving || uploadingThumb ? "Saving…" : "Save changes"}
-                    </button>
+                    </Button>
                   </div>
                 </form>
               </section>
@@ -434,20 +431,20 @@ export function AdminWebinarDetailPage({ webinarId }: { webinarId: string }) {
                             {formatMoney(item.amount, item.currency)}
                           </p>
                         </div>
-                        <Link
+                        <Button
                           href={`/admin/users/${encodeURIComponent(item.user_id)}?from=webinar&webinar=${encodeURIComponent(webinarId)}`}
-                          className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium sm:min-h-10 sm:w-auto"
+                          className="lecture-page-action w-full shrink-0 px-4 sm:w-auto"
                         >
                           View profile
                           <SidebarSvgIcon name="next" size={16} strokeWidth={2.2} />
-                        </Link>
+                        </Button>
                       </article>
                     ))
                   )}
                 </div>
-                {registrantPagination.total > 0 ? (
+                {(registrantPagination.has_next || registrantPagination.has_previous || registrantPagination.page > 1) ? (
                   <PaginationControls
-                    compact
+                    appearance="lecture"
                     page={registrantPagination.page}
                     hasNext={registrantPagination.has_next}
                     hasPrevious={registrantPagination.has_previous}

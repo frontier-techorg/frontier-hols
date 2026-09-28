@@ -6,6 +6,8 @@ import { Icon, Menu } from "@/components/icons";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { PortalShell } from "@/components/platform/provider/PortalShell";
 import { SkeletonBlock } from "@/components/platform/provider/student/DashboardSkeletons";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
+import { Button } from "@/components/ui/Button";
 import { affiliateNav } from "@/components/platform/provider/affiliate/affiliateNav";
 import {
   affiliateDisplayName,
@@ -110,49 +112,11 @@ function DashField({
         autoComplete={autoComplete}
         required={required}
         disabled={disabled}
-        className={cn("dashboard-field", disabled && "cursor-not-allowed opacity-70")}
-      />
-    </div>
-  );
-}
-
-function DashSelect({
-  id,
-  label,
-  value,
-  onChange,
-  disabled,
-  options,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <div className="grid min-w-0 gap-2">
-      <label htmlFor={id} className="dashboard-field-label">
-        {label}
-      </label>
-      <select
-        id={id}
-        name={id}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
         className={cn(
-          "dashboard-field dashboard-field-select min-h-11 w-full min-w-0 max-w-full sm:min-h-10",
-          disabled && "cursor-not-allowed opacity-50",
+          "dashboard-field min-w-0 max-w-full",
+          disabled && "cursor-not-allowed truncate opacity-70",
         )}
-      >
-        {options.map((option) => (
-          <option key={`${option.value}-${option.label}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      />
     </div>
   );
 }
@@ -254,23 +218,19 @@ export function AffiliateProfilePage() {
       nav={affiliateNav}
     >
       <div className="dashboard-screen lectures-page profile-page min-w-0 overflow-x-hidden">
-        <header className="mb-2 flex min-h-10 min-w-0 items-center gap-2 sm:mb-3 sm:min-h-12 sm:gap-3 md:gap-4">
+        <header className="mb-4 flex min-w-0 items-center gap-2 overflow-visible py-0.5 sm:mb-5 sm:gap-3">
           <button
             type="button"
             aria-label="Open sidebar"
             onClick={openSidebar}
-            className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden sm:h-12 sm:w-12"
+            className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden"
           >
             <Icon icon={Menu} size={18} />
           </button>
-          <h1 className="font-sans min-w-0 truncate text-lg font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
+          <h1 className="font-sans min-w-0 truncate py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl">
             Profile
           </h1>
         </header>
-
-        <p className="text-brand-body mb-4 max-w-2xl text-sm text-[color:var(--dash-muted)] sm:mb-5 sm:text-base">
-          Manage your name, photo, and address.
-        </p>
 
         {pageError ? (
           <div className="mb-3 sm:mb-4">
@@ -283,10 +243,13 @@ export function AffiliateProfilePage() {
           </div>
         ) : null}
 
+        {!profile && refreshing ? (
+          <AffiliateProfileSkeleton />
+        ) : (
         <div className="grid w-full min-w-0 items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(15.5rem,18.75rem)_minmax(0,1fr)]">
           <aside className="flex min-w-0 flex-col gap-3 sm:gap-4 lg:sticky lg:top-3">
-            <section className="dashboard-glass-card flex flex-col items-center rounded-2xl px-4 py-5 text-center sm:p-5">
-              <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:h-24 sm:w-24 sm:text-xl">
+            <section className="flex min-w-0 flex-row items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white px-4 py-4 text-left shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:gap-4 sm:px-5 lg:flex-col lg:items-center lg:px-4 lg:py-5 lg:text-center">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)] font-sans text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:h-20 sm:w-20 lg:h-24 lg:w-24 lg:text-xl">
                 {avatarSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarSrc} alt="" className="h-full w-full object-cover" />
@@ -294,54 +257,37 @@ export function AffiliateProfilePage() {
                   affiliateInitials(profile)
                 )}
               </span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="sr-only"
-                onChange={(event) => void onPickPhoto(event.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto || !profile}
-                className="dashboard-pill-soft font-sans mt-3 inline-flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)] transition disabled:opacity-60 sm:min-h-10"
-              >
-                {uploadingPhoto ? "Uploading…" : "Change photo"}
-              </button>
-              <p className="font-sans mt-3 max-w-full break-words text-base font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-lg">
-                {fullName}
-              </p>
-              <p className="text-brand-caption mt-1 max-w-full break-all text-[color:var(--dash-muted)]">
-                {profile?.email || "—"}
-              </p>
-              <span className="mt-3 inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 text-brand-caption font-semibold text-[color:var(--dash-muted)]">
-                Affiliate
-              </span>
+              <div className="flex min-w-0 flex-1 flex-col items-start lg:items-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={(event) => void onPickPhoto(event.target.files?.[0] ?? null)}
+                />
+                <p className="font-sans w-full truncate text-base font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-lg">
+                  {fullName}
+                </p>
+                <p className="text-brand-caption mt-1 w-full truncate text-[color:var(--dash-muted)]" title={profile?.email || undefined}>
+                  {profile?.email || "—"}
+                </p>
+                <span className="mt-2 inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 text-brand-caption font-semibold text-[color:var(--dash-muted)]">
+                  Affiliate
+                </span>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto || !profile}
+                  className="lecture-page-action dashboard-navy-btn font-sans mt-3 inline-flex h-10 min-h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
+                >
+                  {uploadingPhoto ? "Uploading…" : "Change photo"}
+                </button>
+              </div>
             </section>
           </aside>
 
           <div className="min-w-0">
-            {!profile && refreshing ? (
-              <section
-                className="dashboard-glass-card min-w-0 rounded-2xl p-4 sm:p-5 md:p-6"
-                aria-busy="true"
-                aria-label="Loading profile"
-              >
-                <SkeletonBlock className="h-5 w-40 rounded-full" />
-                <SkeletonBlock className="mt-2 h-4 w-64 rounded-full" />
-                <div className="mt-6 grid gap-4">
-                  <SkeletonBlock className="h-11 w-full rounded-2xl" />
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <SkeletonBlock className="h-11 w-full rounded-2xl" />
-                    <SkeletonBlock className="h-11 w-full rounded-2xl" />
-                  </div>
-                  <SkeletonBlock className="h-11 w-full rounded-2xl" />
-                  <SkeletonBlock className="h-11 w-full rounded-2xl" />
-                </div>
-              </section>
-            ) : (
-              <section className="dashboard-glass-card min-w-0 rounded-2xl p-4 sm:p-5 md:p-6">
+              <section className="min-w-0 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white p-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5 md:p-6">
                 <h2 className="font-sans text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg">
                   Profile information
                 </h2>
@@ -388,7 +334,7 @@ export function AffiliateProfilePage() {
                     autoComplete="address-line2"
                   />
                   <div className="grid min-w-0 gap-3 md:grid-cols-2 md:gap-4">
-                    <DashSelect
+                    <ProfileSelect
                       id="state"
                       label="State"
                       value={location.stateSelect}
@@ -415,7 +361,7 @@ export function AffiliateProfilePage() {
                         placeholder="Enter state"
                       />
                     ) : (
-                      <DashSelect
+                      <ProfileSelect
                         id="city"
                         label="City"
                         value={location.citySelect}
@@ -484,29 +430,86 @@ export function AffiliateProfilePage() {
                       </span>
                     </span>
                   </label>
-                  <div className="mt-1 flex flex-col-reverse gap-2 border-t border-[color:var(--dash-surface-border)] pt-4 sm:flex-row sm:items-center sm:justify-end sm:gap-2.5">
+                  <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2.5">
                     <button
                       type="button"
                       onClick={resetForm}
                       disabled={!hasChanges || saving}
-                      className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+                      className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
                     >
                       Cancel
                     </button>
-                    <button
+                    <Button
                       type="submit"
                       disabled={saving || !hasChanges}
-                      className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-6 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-60 sm:min-h-10 sm:w-auto sm:min-w-[10rem]"
+                      className="lecture-page-action h-10 min-h-10 w-full py-0 text-sm sm:w-auto sm:min-w-[9rem]"
                     >
                       {saving ? "Saving…" : "Save changes"}
-                    </button>
+                    </Button>
                   </div>
                 </form>
               </section>
-            )}
           </div>
         </div>
+        )}
       </div>
     </PortalShell>
+  );
+}
+
+function ProfileFieldSkeleton() {
+  return (
+    <div className="grid min-w-0 gap-2">
+      <SkeletonBlock className="h-3.5 w-24 max-w-full rounded-full" />
+      <SkeletonBlock className="h-12 w-full rounded-[0.875rem]" />
+    </div>
+  );
+}
+
+function AffiliateProfileSkeleton() {
+  return (
+    <div
+      className="grid w-full min-w-0 items-start gap-3 sm:gap-4 lg:grid-cols-[minmax(15.5rem,18.75rem)_minmax(0,1fr)]"
+      aria-busy="true"
+      aria-label="Loading profile"
+    >
+      <aside className="min-w-0">
+        <section className="flex min-w-0 flex-row items-center gap-3 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white px-4 py-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:gap-4 sm:px-5 lg:flex-col lg:items-center lg:px-4 lg:py-5">
+          <SkeletonBlock className="h-16 w-16 shrink-0 rounded-full sm:h-20 sm:w-20 lg:h-24 lg:w-24" />
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-2 lg:w-full lg:items-center">
+            <SkeletonBlock className="h-5 w-36 max-w-full rounded-full" />
+            <SkeletonBlock className="h-3.5 w-48 max-w-full rounded-full" />
+            <SkeletonBlock className="h-6 w-16 rounded-full" />
+            <SkeletonBlock className="mt-1 h-10 w-full rounded-full sm:w-36" />
+          </div>
+        </section>
+      </aside>
+      <section className="min-w-0 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white p-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5 md:p-6">
+        <SkeletonBlock className="h-5 w-40 max-w-full rounded-full" />
+        <SkeletonBlock className="mt-2 h-4 w-full max-w-md rounded-full" />
+        <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4">
+          <ProfileFieldSkeleton />
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+            <ProfileFieldSkeleton />
+            <ProfileFieldSkeleton />
+          </div>
+          <ProfileFieldSkeleton />
+          <ProfileFieldSkeleton />
+          <div className="grid min-w-0 gap-3 md:grid-cols-2 md:gap-4">
+            <ProfileFieldSkeleton />
+            <ProfileFieldSkeleton />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+            <ProfileFieldSkeleton />
+            <ProfileFieldSkeleton />
+          </div>
+          <SkeletonBlock className="h-16 w-full rounded-2xl" />
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-24" />
+            <SkeletonBlock className="h-10 w-full rounded-full sm:w-36" />
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

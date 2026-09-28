@@ -1,6 +1,6 @@
 import type { SidebarIconName } from "@/components/platform/provider/sidebar-icons";
 
-export type SettingsSection = "profile" | "card" | "orders";
+export type SettingsSection = "profile" | "plan" | "order";
 
 export type SettingsNavItem = {
   id: SettingsSection;
@@ -15,20 +15,20 @@ export const SETTINGS_NAV: readonly SettingsNavItem[] = [
   {
     id: "profile",
     href: "/student/profile",
-    label: "Profile information",
+    label: "Profile",
     shortLabel: "Profile",
     icon: "profile",
     exact: true,
   },
   {
-    id: "card",
-    href: "/student/profile/card",
-    label: "Payment card",
-    shortLabel: "Card",
-    icon: "payment",
+    id: "plan",
+    href: "/student/profile/plans",
+    label: "Plan",
+    shortLabel: "Plan",
+    icon: "plans",
   },
   {
-    id: "orders",
+    id: "order",
     href: "/student/profile/orders",
     label: "Orders",
     shortLabel: "Orders",

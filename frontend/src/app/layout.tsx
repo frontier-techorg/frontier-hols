@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { DM_Sans, Outfit } from "next/font/google";
 import { BrandStyles } from "@/components/BrandStyles";
-import {
-  parsePortalTheme,
-  PORTAL_THEME_COOKIE,
-} from "@/components/platform/provider/portal-theme";
 import { brand } from "@/config/brand";
 import "./globals.css";
 
@@ -41,18 +36,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const jar = await cookies();
-  const portalTheme = parsePortalTheme(jar.get(PORTAL_THEME_COOKIE)?.value) ?? "dark";
-
   return (
     <html
       lang="en"
-      data-portal-theme={portalTheme}
+      data-portal-theme="light"
       suppressHydrationWarning
       className={`${primaryFont.variable} ${secondaryFont.variable} h-full antialiased`}
     >

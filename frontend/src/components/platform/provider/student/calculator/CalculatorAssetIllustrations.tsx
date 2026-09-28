@@ -431,19 +431,18 @@ export function AssetSyringe({
     <div
       className={cn(
         "flex max-w-full flex-col items-center",
-        // Overview: clip so the tilted long needle never spills the card.
-        // Draw: keep visible — scene card clips; local clip would cut the plunger.
-        needleDown || gsapDriven ? "overflow-visible" : "overflow-hidden",
+        // Keep the rotated barrel fully visible. A hidden frame cut the
+        // overview syringe off behind the top of the card.
+        "overflow-visible",
         className,
       )}
       data-syringe-box={needleDown ? "draw" : undefined}
     >
       <div
         className={cn(
-          "relative flex max-w-full items-center justify-center",
-          needleDown || gsapDriven ? "overflow-visible" : "overflow-hidden",
+          "relative flex max-w-full items-center justify-center overflow-visible",
         )}
-        style={{ width: frameW, height: frameH, maxWidth: "100%" }}
+        style={{ width: frameW, height: horizontal ? frameH + 16 : frameH, maxWidth: "100%" }}
       >
         <div
           data-syringe-rotator

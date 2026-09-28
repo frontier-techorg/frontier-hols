@@ -69,22 +69,6 @@ def login(email: str, role: str, password: str = PASSWORD) -> str:
     return token
 
 
-def add_card(token: str, name: str) -> None:
-    _request(
-        "POST",
-        "/api/payment/card",
-        token=token,
-        body={
-            "card_number": "4242424242424242",
-            "exp_month": 12,
-            "exp_year": 2028,
-            "cvc": "123",
-            "card_holder_name": name,
-            "is_default": True,
-        },
-    )
-
-
 def purchase(token: str, plan_type: str) -> dict[str, Any]:
     return _request("POST", "/api/payment/purchase", token=token, body={"plan_type": plan_type})
 
@@ -235,7 +219,6 @@ def main() -> int:
 
     for student, plan_type in purchases:
         token = login(student["email"], "student")
-        add_card(token, f"{student['first']} {student['last']}")
         result = purchase(token, plan_type)
         amount = _money(result["order"]["amount"])
         expected_revenue += amount

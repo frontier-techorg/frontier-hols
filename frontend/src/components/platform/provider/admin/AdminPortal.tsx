@@ -64,7 +64,7 @@ export function AdminPortal() {
           type="button"
           aria-label="Add affiliate"
           onClick={openCreateDialog}
-          className="dashboard-navy-btn font-sans inline-flex h-10 w-10 min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-medium tracking-[0.01em] text-white sm:h-10 sm:w-auto sm:px-4"
+          className="dashboard-page-action dashboard-navy-btn font-sans inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-full px-0 text-sm font-medium text-white sm:w-auto sm:px-5"
         >
           <SidebarSvgIcon name="plus" size={15} strokeWidth={2.2} />
           <span className="hidden sm:inline">Add affiliate</span>

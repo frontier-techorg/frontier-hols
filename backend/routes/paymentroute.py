@@ -1,4 +1,4 @@
-"""Payment routes — plans, purchase, orders, cards."""
+"""Payment routes — plans, purchase, orders."""
 
 from typing import Annotated, Optional
 
@@ -6,17 +6,13 @@ from fastapi import APIRouter, Depends, Query
 
 from core.route_handlers import handle_route_errors
 from database_entities import PlanType, UserRole
-from dependencies import CurrentUser, get_current_user, require_roles
-from models.common import ApiSuccessResponse, success_response
+from dependencies import CurrentUser, require_roles
+from models.common import success_response
 from models.payment import (
-    CardCreateRequest,
-    CardData,
-    CardListData,
-    CardListResponse,
-    CardResponse,
-    CardUpdateRequest,
     MembershipData,
     MembershipResponse,
+    OrderDetailData,
+    OrderDetailResponse,
     OrderHistoryData,
     OrderHistoryResponse,
     PlanListData,
@@ -72,11 +68,10 @@ async def purchase_plan(
     body: PurchasePlanRequest,
     current_user: Annotated[CurrentUser, Depends(require_roles(UserRole.STUDENT))],
 ) -> PurchasePlanResponse:
-    """Student — purchase a membership plan using the saved card from token."""
+    """Student — purchase a membership plan (no saved card required)."""
     result = await payment_service.purchase_plan(
         user_id=current_user.user_id,
         plan_type=body.plan_type,
-        payment_method_id=body.payment_method_id,
     )
     return success_response(PurchasePlanData(**result))
 
@@ -107,6 +102,17 @@ async def list_order_history(
         cursor=cursor,
     )
     return success_response(OrderHistoryData(**result))
+
+
+@router.get("/orders/item/{order_id}", response_model=OrderDetailResponse)
+@handle_route_errors("get order", log_prefix="Payment")
+async def get_order(
+    order_id: str,
+    current_user: Annotated[CurrentUser, Depends(require_roles(UserRole.STUDENT))],
+) -> OrderDetailResponse:
+    """Student — one order, used by the invoice page."""
+    order = await payment_service.get_order(current_user.user_id, order_id)
+    return success_response(OrderDetailData(order=order))
 
 
 @router.get("/orders/{user_id}", response_model=OrderHistoryResponse)
@@ -161,75 +167,3 @@ async def get_admin_sales(
     _ = current_user
     overview = await sales_service.get_admin_sales_overview()
     return success_response(SalesOverviewData(**overview))
-
-
-@router.post("/card", response_model=CardResponse)
-@handle_route_errors("add card", log_prefix="Payment")
-async def add_card(
-    body: CardCreateRequest,
-    current_user: Annotated[CurrentUser, Depends(require_roles(UserRole.STUDENT))],
-) -> CardResponse:
-    """Student — add one payment card (one card per account)."""
-    card = await payment_service.add_card(
-        user_id=current_user.user_id,
-        card_number=body.card_number,
-        exp_month=body.exp_month,
-        exp_year=body.exp_year,
-        cvc=body.cvc,
-        pin=body.pin,
-        card_holder_name=body.card_holder_name,
-        is_default=body.is_default,
-        billing_address=body.billing_address,
-    )
-    return success_response(CardData(card=card))
-
-
-@router.get("/cards", response_model=CardListResponse)
-@handle_route_errors("list cards", log_prefix="Payment")
-async def list_cards(
-    current_user: Annotated[CurrentUser, Depends(require_roles(UserRole.STUDENT))],
-) -> CardListResponse:
-    """Student — list saved cards (max one per account)."""
-    return success_response(
-        CardListData(items=await payment_service.list_cards(current_user.user_id)),
-    )
-
-
-@router.get("/card", response_model=CardResponse)
-@handle_route_errors("get card details", log_prefix="Payment")
-async def get_card(
-    current_user: Annotated[CurrentUser, Depends(require_roles(UserRole.STUDENT))],
-) -> CardResponse:
-    """Student — get saved card details from auth token (masked)."""
-    card = await payment_service.get_student_card(current_user.user_id)
-    return success_response(CardData(card=card))
-
-
-@router.put("/card", response_model=CardResponse)
-@handle_route_errors("edit card", log_prefix="Payment")
-async def edit_card(
-    body: CardUpdateRequest,
-    current_user: Annotated[CurrentUser, Depends(require_roles(UserRole.STUDENT))],
-) -> CardResponse:
-    """Student — edit saved card details from auth token."""
-    card = await payment_service.edit_student_card(
-        user_id=current_user.user_id,
-        card_number=body.card_number,
-        exp_month=body.exp_month,
-        exp_year=body.exp_year,
-        cvc=body.cvc,
-        pin=body.pin,
-        card_holder_name=body.card_holder_name,
-        billing_address=body.billing_address,
-    )
-    return success_response(CardData(card=card))
-
-
-@router.delete("/card", response_model=ApiSuccessResponse[dict])
-@handle_route_errors("remove card", log_prefix="Payment")
-async def remove_card(
-    current_user: Annotated[CurrentUser, Depends(require_roles(UserRole.STUDENT))],
-) -> ApiSuccessResponse[dict]:
-    """Student — remove the saved payment card."""
-    await payment_service.delete_student_card(current_user.user_id)
-    return success_response({})

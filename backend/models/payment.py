@@ -17,29 +17,6 @@ class PlanUpdateRequest(BaseModel):
 
 class PurchasePlanRequest(BaseModel):
     plan_type: PlanType
-    payment_method_id: Optional[str] = None
-
-
-class CardCreateRequest(BaseModel):
-    card_number: str = Field(min_length=12, max_length=19)
-    exp_month: int = Field(ge=1, le=12)
-    exp_year: int = Field(ge=2024, le=2100)
-    cvc: str = Field(min_length=3, max_length=4, pattern=r"^\d{3,4}$")
-    pin: Optional[str] = Field(default=None, min_length=4, max_length=6, pattern=r"^\d{4,6}$")
-    card_holder_name: Optional[str] = Field(default=None, max_length=80)
-    is_default: bool = False
-    billing_address: Optional[dict[str, Any]] = None
-
-
-class CardUpdateRequest(BaseModel):
-    card_number: Optional[str] = Field(default=None, min_length=12, max_length=19)
-    exp_month: Optional[int] = Field(default=None, ge=1, le=12)
-    exp_year: Optional[int] = Field(default=None, ge=2024, le=2100)
-    cvc: Optional[str] = Field(default=None, min_length=3, max_length=4, pattern=r"^\d{3,4}$")
-    pin: Optional[str] = Field(default=None, min_length=4, max_length=6, pattern=r"^\d{4,6}$")
-    card_holder_name: Optional[str] = Field(default=None, max_length=80)
-    is_default: Optional[bool] = None
-    billing_address: Optional[dict[str, Any]] = None
 
 
 class PlanListData(BaseModel):
@@ -64,6 +41,10 @@ class OrderHistoryData(BaseModel):
     pagination: PaginationMeta
 
 
+class OrderDetailData(BaseModel):
+    order: dict[str, Any]
+
+
 class StudentCommerceData(BaseModel):
     user_id: str
     total_spent: float = 0
@@ -80,19 +61,10 @@ class StudentCommerceData(BaseModel):
     affiliate_earned: float = 0
 
 
-class CardData(BaseModel):
-    card: dict[str, Any]
-
-
-class CardListData(BaseModel):
-    items: list[dict[str, Any]]
-
-
 PlanListResponse = ApiSuccessResponse[PlanListData]
 PlanUpdateResponse = ApiSuccessResponse[PlanUpdateData]
 PurchasePlanResponse = ApiSuccessResponse[PurchasePlanData]
 MembershipResponse = ApiSuccessResponse[MembershipData]
 OrderHistoryResponse = ApiSuccessResponse[OrderHistoryData]
+OrderDetailResponse = ApiSuccessResponse[OrderDetailData]
 StudentCommerceResponse = ApiSuccessResponse[StudentCommerceData]
-CardResponse = ApiSuccessResponse[CardData]
-CardListResponse = ApiSuccessResponse[CardListData]

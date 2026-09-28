@@ -84,7 +84,7 @@ export const landingContent = {
         { id: "lectures", label: "Lectures" },
         { id: "calculator", label: "Calculator" },
         { id: "advisor", label: "Peptide Advisor" },
-        { id: "payment", label: "Payment" },
+        { id: "payment", label: "Plans" },
         { id: "profile", label: "Profile" },
       ],
       membership: {
@@ -101,7 +101,6 @@ export const landingContent = {
       actions: [
         { id: "plans", label: "Membership plans" },
         { id: "orders", label: "Order history", badge: "0" },
-        { id: "card", label: "Payment card" },
         { id: "account", label: "Account profile" },
       ],
     },

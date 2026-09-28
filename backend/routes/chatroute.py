@@ -29,9 +29,10 @@ from models.chat import (
     PatientListResponse,
     PatientMessagesData,
     PatientMessagesResponse,
+    ChatReplyData,
+    ChatReplyResponse,
     SaveIntakeRequest,
     SendMessageRequest,
-    UpdateBoardRequest,
 )
 from config import settings
 from models.common import success_response
@@ -222,36 +223,16 @@ async def recommend_for_patient(
     return success_response(PatientDetail(**result))
 
 
-@router.post("/patients/{patient_id}/board", response_model=PatientDetailResponse)
-@handle_route_errors("update recommendation board", log_prefix="Chat")
-async def update_patient_board(
-    patient_id: str,
-    req: UpdateBoardRequest,
-    current_user: MemberStudentUser,
-) -> PatientDetailResponse:
-    result = await chat_service.update_board_for_patient(
-        user_id=current_user.user_id,
-        patient_id=patient_id,
-        confidence=req.confidence,
-        preferred=req.preferred,
-        clear_preferred=req.clear_preferred,
-        focus_peptides=req.focus_peptides,
-    )
-    return success_response(PatientDetail(**result))
-
-
-@router.post("/patients/{patient_id}/messages", response_model=PatientDetailResponse)
+@router.post("/patients/{patient_id}/messages", response_model=ChatReplyResponse)
 @handle_route_errors("send patient chat message", log_prefix="Chat")
 async def send_patient_message(
     patient_id: str,
     req: SendMessageRequest,
     current_user: MemberStudentUser,
-) -> PatientDetailResponse:
+) -> ChatReplyResponse:
     result = await chat_service.send_message_for_patient(
         user_id=current_user.user_id,
         patient_id=patient_id,
-        question=req.question,
-        top_k=req.top_k,
-        focus_peptides=req.focus_peptides,
+        query=req.query,
     )
-    return success_response(PatientDetail(**result))
+    return success_response(ChatReplyData(**result))

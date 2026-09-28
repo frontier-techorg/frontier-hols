@@ -107,19 +107,6 @@ def main() -> int:
     student_token = login(STUDENT_EMAIL, "student")
     affiliate_token = login(AFF_EMAIL, "affiliate")
 
-    _request(
-        "POST",
-        "/api/payment/card",
-        token=student_token,
-        body={
-            "card_number": "4242424242424242",
-            "exp_month": 12,
-            "exp_year": 2028,
-            "cvc": "123",
-            "card_holder_name": "Dev Student",
-            "is_default": True,
-        },
-    )
     purchase = _request("POST", "/api/payment/purchase", token=student_token, body={"plan_type": "monthly"})
     amount = _money(purchase["order"]["amount"])
     print("purchased", purchase["order"]["order_id"], amount)

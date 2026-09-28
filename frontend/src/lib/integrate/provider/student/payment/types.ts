@@ -35,24 +35,12 @@ export type Membership = {
   currency: string;
 };
 
-export type PaymentCard = {
-  payment_method_id: string;
-  card_holder_name?: string;
-  card_number_masked: string;
-  card_last4: string;
-  exp_month: number;
-  exp_year: number;
-  brand?: string;
-  is_default: boolean;
-  has_cvc: boolean;
-  has_pin: boolean;
-  billing_address?: Record<string, unknown>;
-  created_at?: string;
-};
-
 export type Order = {
   order_id: string;
-  plan_type: PlanType;
+  plan_type?: PlanType | null;
+  item_kind?: "plan" | "webinar" | string | null;
+  webinar_id?: string | null;
+  webinar_title?: string | null;
   amount: number;
   currency: string;
   status: string;
@@ -65,28 +53,6 @@ export type Order = {
   affiliate_commission?: number | null;
 };
 
-export type CardCreatePayload = {
-  card_number: string;
-  exp_month: number;
-  exp_year: number;
-  cvc: string;
-  pin?: string;
-  card_holder_name?: string;
-  is_default?: boolean;
-  billing_address?: Record<string, unknown>;
-};
-
-export type CardUpdatePayload = {
-  card_number?: string;
-  exp_month?: number;
-  exp_year?: number;
-  cvc?: string;
-  pin?: string;
-  card_holder_name?: string;
-  is_default?: boolean;
-  billing_address?: Record<string, unknown>;
-};
-
 export type PaginationMeta = {
   page: number;
   limit: number;
@@ -95,6 +61,36 @@ export type PaginationMeta = {
   has_previous?: boolean;
   next_cursor?: string | null;
 };
+
+export function isWebinarOrder(
+  order: Pick<Order, "item_kind" | "webinar_id" | "webinar_title">,
+) {
+  return order.item_kind === "webinar" || Boolean(order.webinar_id || order.webinar_title);
+}
+
+export function orderKindLabel(
+  order: Pick<Order, "item_kind" | "webinar_id" | "webinar_title">,
+) {
+  return isWebinarOrder(order) ? "Webinar" : "Subscription";
+}
+
+export function orderPlanName(
+  order: Pick<Order, "item_kind" | "webinar_id" | "webinar_title" | "plan_type">,
+) {
+  if (isWebinarOrder(order)) return order.webinar_title || "Webinar";
+  if (order.plan_type && planLabels[order.plan_type]) return planLabels[order.plan_type];
+  return "Plan";
+}
+
+export function orderItemLabel(
+  order: Pick<Order, "item_kind" | "webinar_id" | "webinar_title" | "plan_type">,
+) {
+  if (isWebinarOrder(order)) return order.webinar_title || "Webinar";
+  if (order.plan_type && planLabels[order.plan_type]) {
+    return `${planLabels[order.plan_type]} plan`;
+  }
+  return "Order";
+}
 
 export const planLabels: Record<PlanType, string> = {
   monthly: "Monthly",

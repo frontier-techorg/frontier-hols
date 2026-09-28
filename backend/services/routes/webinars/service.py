@@ -13,6 +13,8 @@ from fastapi import HTTPException, status
 from core.async_io import run_sync
 from database import get_table
 from database_entities import (
+    Order,
+    OrderStatus,
     UserRole,
     Webinar,
     WebinarRegistration,
@@ -22,7 +24,6 @@ from database_entities import (
 )
 from services.common.pagination import build_pagination, normalize_value
 from services.routes.auth.service import get_user_by_id
-from services.routes.payment import service as payment_service
 
 logger = logging.getLogger(__name__)
 
@@ -543,6 +544,7 @@ async def book_webinar(
     webinar_id: str,
     payment_method_id: Optional[str] = None,
 ) -> dict[str, Any]:
+    _ = payment_method_id
     user = await get_user_by_id(user_id)
     if not user or user.get("role") != UserRole.STUDENT.value:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only students can book webinars")
@@ -566,25 +568,96 @@ async def book_webinar(
 
     price = float(normalize_value(webinar.get("price")) or 0)
     currency = str(webinar.get("currency") or "USD")
-    resolved_payment_method_id: Optional[str] = None
     order_id: Optional[str] = None
+    created_at = now_iso()
 
     if price > 0:
-        try:
-            resolved_payment_method_id = (
-                payment_method_id or await payment_service.get_student_payment_method_id(user_id)
-            )
-            await payment_service.get_card(user_id, resolved_payment_method_id)
-        except HTTPException as exc:
-            if exc.status_code == status.HTTP_404_NOT_FOUND:
-                raise HTTPException(
-                    status.HTTP_404_NOT_FOUND,
-                    "Payment method not found. Save a card before booking a paid webinar.",
-                ) from exc
-            raise
-        order_id = uuid.uuid4().hex
+        from models.common import ErrorCodes
+        from services.common.payment_gateway import CardChargeRequest, process_card_charge
 
-    created_at = now_iso()
+        order_id = uuid.uuid4().hex
+        affiliate_id = user.get("referred_by_affiliate_id")
+        affiliate_commission = None
+        if affiliate_id:
+            affiliate = await get_user_by_id(str(affiliate_id))
+            margin = affiliate.get("margin_percent") if affiliate else None
+            if margin is not None:
+                affiliate_commission = round(price * float(margin) / 100, 2)
+
+        charge = await process_card_charge(
+            CardChargeRequest(
+                user_id=user_id,
+                amount=price,
+                currency=currency,
+                plan_type="webinar",
+                order_id=order_id,
+            )
+        )
+        if not charge.success:
+            raise HTTPException(
+                status.HTTP_402_PAYMENT_REQUIRED,
+                detail={
+                    "error": charge.message or "Payment failed.",
+                    "error_code": ErrorCodes.PAYMENT_FAILED,
+                },
+            )
+
+        processor = "bypass" if charge.bypassed else "gateway"
+        commission_value = round(float(affiliate_commission or 0), 2)
+        platform_profit = round(price - commission_value, 2)
+        paid_order = Order(
+            user_id=user_id,
+            order_id=order_id,
+            item_kind="webinar",
+            webinar_id=webinar_id,
+            webinar_title=str(webinar.get("title") or "Webinar"),
+            amount=price,
+            currency=currency,
+            status=OrderStatus.PAID,
+            affiliate_id=str(affiliate_id) if affiliate_id else None,
+            affiliate_commission=affiliate_commission,
+            platform_profit=platform_profit,
+            gateway_transaction_id=charge.transaction_id,
+            payment_processor=processor,
+            created_at=created_at,
+        )
+        await run_sync(_table().put_item, Item=paid_order.to_item())
+        try:
+            from services.routes.finance.service import adjust_admin_finance, increment_student_commerce
+            from services.routes.sales.service import record_paid_sale
+
+            await increment_student_commerce(
+                user_id=user_id,
+                amount=price,
+                admin_earned=platform_profit,
+                currency=currency,
+                plan_type="webinar",
+                paid_at=created_at,
+                update_membership=False,
+            )
+            await adjust_admin_finance(
+                revenue=price,
+                profit=platform_profit,
+                order_count=1,
+                currency=currency,
+            )
+            await record_paid_sale(
+                order_id=order_id,
+                plan_type="webinar",
+                amount=price,
+                currency=currency,
+                paid_at=created_at,
+                affiliate_id=str(affiliate_id) if affiliate_id else None,
+                affiliate_commission=affiliate_commission,
+                include_plan_bucket=False,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to write webinar commerce totals user_id=%s order_id=%s",
+                user_id,
+                order_id,
+            )
+
     registration = WebinarRegistration(
         user_id=user_id,
         webinar_id=webinar_id,
@@ -592,7 +665,7 @@ async def book_webinar(
         amount=price,
         currency=currency,
         status=WebinarRegistrationStatus.BOOKED,
-        payment_method_id=resolved_payment_method_id,
+        payment_method_id=None,
         created_at=created_at,
     )
     webinar["seats_taken"] = seats_taken + 1

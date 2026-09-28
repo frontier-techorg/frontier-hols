@@ -6,10 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
-import { LessonsWorkspaceSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
+import {
+  lessonWorkspaceGridClass,
+  LessonsWorkspaceSkeleton,
+} from "@/components/platform/provider/student/DashboardSkeletons";
 import { CoursePageLayout } from "@/components/platform/provider/student/lectures/CoursePageLayout";
 import { LectureMembershipLockedScreen } from "@/components/platform/provider/student/lectures/LectureMembershipLock";
-import { LecturesPageLayout } from "@/components/platform/provider/student/lectures/LecturesPageLayout";
 import { LessonContentPanel } from "@/components/platform/provider/student/lectures/LessonContentPanel";
 import {
   LearningModeToggle,
@@ -70,18 +72,13 @@ function LessonIndexRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "lesson-index-row flex min-h-11 w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left",
+        "lesson-index-row flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left font-sans text-sm",
         selected ? "bg-[color:var(--dash-soft)]" : "hols-option-hover",
       )}
       aria-current={selected ? "true" : undefined}
     >
       <span
-        className={cn(
-          "lesson-index-badge mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold tabular-nums",
-          selected
-            ? "dashboard-navy-btn text-white"
-            : "dashboard-tool-icon text-[color:var(--dash-text)]",
-        )}
+        className="lesson-index-badge flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold tabular-nums"
       >
         {selected ? <SidebarSvgIcon name="check" size={13} /> : index + 1}
       </span>
@@ -90,7 +87,7 @@ function LessonIndexRow({
           {lesson.title}
         </span>
         {lesson.l2_name ? (
-          <span className="text-brand-caption mt-0.5 block line-clamp-1 text-[color:var(--dash-faint)]">
+          <span className="mt-0.5 block truncate font-sans text-sm text-[color:var(--dash-faint)]">
             {lesson.l2_name}
           </span>
         ) : null}
@@ -289,9 +286,17 @@ export function StudentLessonsWorkspace({
 
   if (!membershipAccess.ready) {
     return (
-      <LecturesPageLayout>
+      <CoursePageLayout
+        title="Lessons"
+        description=""
+        courseId={courseId}
+        courseNavActive="lessons"
+        backHref={`/student/lectures/${courseId}`}
+        backLabel="Back to cover"
+        hideHero
+      >
         <LessonsWorkspaceSkeleton />
-      </LecturesPageLayout>
+      </CoursePageLayout>
     );
   }
 
@@ -322,13 +327,13 @@ export function StudentLessonsWorkspace({
       >
         {(topicId || l1Name) && (
           <div className="dashboard-glass-card course-book-filter mb-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
-            <p className="text-brand-body text-[color:var(--dash-muted)]">
+            <p className="font-sans text-sm text-[color:var(--dash-muted)]">
               Reading{" "}
               <span className="font-medium text-[color:var(--dash-text)]">{filterLabel}</span>
             </p>
             <Link
               href={`/student/lectures/${courseId}/lessons`}
-              className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)] sm:min-h-10 sm:w-auto"
+              className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-4 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)] sm:w-auto"
             >
               <SidebarSvgIcon name="lectures" size={15} />
               Show full volume
@@ -342,11 +347,11 @@ export function StudentLessonsWorkspace({
           <LessonsWorkspaceSkeleton />
         ) : filteredLessons.length === 0 ? (
           <div className="dashboard-glass-card course-book-page rounded-2xl p-10 text-center">
-            <p className="text-brand-body text-[color:var(--dash-faint)]">No lessons found.</p>
+            <p className="font-sans text-sm text-[color:var(--dash-faint)]">No lessons found.</p>
             {(topicId || l1Name) && (
               <Link
                 href={`/student/lectures/${courseId}/lessons`}
-                className="dashboard-navy-btn font-sans mt-4 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10"
+                className="lecture-page-action dashboard-navy-btn font-sans mt-4 inline-flex h-10 min-h-10 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white"
               >
                 <SidebarSvgIcon name="lectures" size={15} />
                 View all lessons
@@ -354,9 +359,10 @@ export function StudentLessonsWorkspace({
             )}
           </div>
         ) : (
-          <div ref={stageRef} className="grid w-full min-w-0 max-w-full gap-3 sm:gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:items-start">
-            {/* Mobile: compact sticky index control above reading content */}
-            <div className="order-1 min-w-0 lg:hidden">
+          <div className="@container min-w-0 w-full">
+          <div ref={stageRef} className={lessonWorkspaceGridClass}>
+            {/* Narrow: compact index control above reading content */}
+            <div className="order-1 min-w-0 @min-[52rem]:hidden">
               <div className="dashboard-glass-card course-book-index overflow-hidden rounded-2xl">
                 <button
                   type="button"
@@ -416,7 +422,7 @@ export function StudentLessonsWorkspace({
 
             <aside
               data-book-index
-              className="dashboard-glass-card course-book-index relative order-3 hidden flex-col overflow-hidden rounded-2xl lg:order-1 lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100dvh-2rem)]"
+              className="dashboard-glass-card course-book-index relative order-3 hidden flex-col overflow-hidden rounded-2xl @min-[52rem]:sticky @min-[52rem]:top-4 @min-[52rem]:order-1 @min-[52rem]:flex @min-[52rem]:max-h-[calc(100dvh-2rem)]"
             >
               <div className="relative flex shrink-0 flex-col gap-3 border-b border-[color:var(--dash-surface-border)] px-4 py-4 sm:px-5">
                 <div>
@@ -466,12 +472,13 @@ export function StudentLessonsWorkspace({
                 />
               ) : (
                 <div className="dashboard-glass-card course-book-page rounded-2xl p-6 text-center sm:p-10">
-                  <p className="text-brand-body text-[color:var(--dash-faint)]">
+                  <p className="font-sans text-sm text-[color:var(--dash-faint)]">
                     Select a page from the index to begin reading.
                   </p>
                 </div>
               )}
             </main>
+          </div>
           </div>
         )}
       </CoursePageLayout>

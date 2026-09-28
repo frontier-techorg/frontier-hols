@@ -4,7 +4,7 @@ import { StudentSettingsPage } from "@/components/platform/provider/student/prof
 export default function StudentProfileOrdersRoute() {
   return (
     <PortalGate role="student">
-      <StudentSettingsPage section="orders" />
+      <StudentSettingsPage section="order" />
     </PortalGate>
   );
 }

@@ -35,32 +35,34 @@ export function WebinarsPageLayout({
       nav={studentNav}
     >
       <div className="dashboard-screen lectures-page webinars-page relative min-w-0 overflow-x-hidden">
-        <header className="mb-4 flex min-h-10 min-w-0 items-center gap-2 sm:mb-5 sm:min-h-12 sm:gap-3 md:gap-4">
+        <header className="mb-3 flex min-h-10 min-w-0 items-center gap-2 sm:mb-3 sm:min-h-12 sm:gap-3">
           <button
             type="button"
             aria-label="Open sidebar"
             onClick={openSidebar}
-            className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden sm:h-12 sm:w-12"
+            className="dashboard-icon-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full lg:hidden"
           >
             <Icon icon={Menu} size={18} />
           </button>
 
-          {backHref ? (
-            <Link
-              href={backHref}
-              aria-label={backLabel}
-              className="adviser-chat-back-btn dashboard-navy-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-full no-underline sm:h-12 sm:w-12"
-            >
-              <SidebarSvgIcon name="previous" size={18} strokeWidth={2.4} />
-            </Link>
-          ) : null}
+          <div className="flex min-w-0 items-center gap-0.5">
+            {backHref ? (
+              <Link
+                href={backHref}
+                aria-label={backLabel}
+                className="webinar-back-btn flex h-10 w-8 shrink-0 items-center justify-center rounded-full no-underline"
+              >
+                <SidebarSvgIcon name="back" size={32} className="webinar-back-mark" />
+              </Link>
+            ) : null}
 
-          <h1
-            className="font-sans min-w-0 truncate text-lg font-bold leading-none tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl"
-            title={title}
-          >
-            {title}
-          </h1>
+            <h1
+              className="font-sans min-w-0 overflow-visible py-1 text-lg font-bold leading-normal tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl md:text-2xl"
+              title={title}
+            >
+              {title}
+            </h1>
+          </div>
 
           <div className="min-w-0 flex-1" aria-hidden />
 

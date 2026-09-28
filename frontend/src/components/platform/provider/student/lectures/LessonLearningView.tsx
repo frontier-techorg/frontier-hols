@@ -4,20 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { LessonLearningSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import type { LessonDetail } from "@/lib/integrate/provider/student/lectures";
-import {
-  BookOpen,
-  Highlighter,
-  Icon,
-  List,
-  Maximize2,
-  Moon,
-  PanelTop,
-  PenLine,
-  Sun,
-  Undo2,
-  ZoomIn,
-  ZoomOut,
-} from "@/components/icons";
+import { BookOpen, Highlighter, Icon, Moon, Sun } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { LessonProse } from "./lessonProse";
 import {
@@ -105,22 +92,10 @@ function clearHighlights(container: HTMLElement | null) {
 }
 
 const Icons = {
-  exit: <SidebarSvgIcon name="previous" size={16} />,
-  focus: <SidebarSvgIcon name="focus" size={16} />,
-  center: <Icon icon={PanelTop} size={15} />,
-  full: <Icon icon={Maximize2} size={15} />,
   light: <Icon icon={Sun} size={15} />,
   sepia: <Icon icon={BookOpen} size={15} />,
   dark: <Icon icon={Moon} size={15} />,
-  spacingTight: <Icon icon={List} size={15} />,
-  spacingNormal: <Icon icon={List} size={15} />,
-  spacingWide: <Icon icon={List} size={15} />,
-  zoomOut: <Icon icon={ZoomOut} size={15} />,
-  zoomIn: <Icon icon={ZoomIn} size={15} />,
   highlight: <Icon icon={Highlighter} size={15} />,
-  marker: <Icon icon={PenLine} size={15} />,
-  undo: <Icon icon={Undo2} size={15} />,
-  clear: <SidebarSvgIcon name="cross" size={15} />,
   book: <Icon icon={BookOpen} size={15} />,
 };
 
@@ -150,8 +125,8 @@ function ToolButton({
       className={cn(
         "lesson-learning-tool inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition",
         active
-          ? "dashboard-navy-btn text-white"
-          : "text-current",
+          ? "is-active bg-[#142644] text-white [.lesson-learning-theme-dark_&]:bg-[#C5D63A] [.lesson-learning-theme-dark_&]:text-[#142644]"
+          : "text-[#152744] [.lesson-learning-theme-dark_&]:text-[#e8eef6] [.lesson-learning-theme-sepia_&]:text-[#3d3428]",
         disabled && "cursor-not-allowed opacity-40",
         className,
       )}
@@ -189,47 +164,11 @@ function IconSegmentedControl<T extends string>({
           className={cn(
             "lesson-learning-seg-btn inline-flex h-8 w-8 items-center justify-center rounded-full transition",
             value === option.id
-              ? "dashboard-navy-btn text-white"
-              : "text-current/70",
+              ? "is-active bg-[#142644] text-white [.lesson-learning-theme-dark_&]:bg-[#C5D63A] [.lesson-learning-theme-dark_&]:text-[#142644]"
+              : "text-[#152744] [.lesson-learning-theme-dark_&]:text-[#e8eef6] [.lesson-learning-theme-sepia_&]:text-[#3d3428]",
           )}
         >
           {option.icon}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function TextSegmentedControl<T extends string>({
-  value,
-  options,
-  onChange,
-  ariaLabel,
-}: {
-  value: T;
-  options: Array<{ id: T; label: string }>;
-  onChange: (value: T) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label={ariaLabel}
-      className="lesson-learning-seg inline-flex shrink-0 items-center gap-0.5 rounded-full p-0.5"
-    >
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          onClick={() => onChange(option.id)}
-          className={cn(
-            "lesson-learning-seg-btn font-sans inline-flex h-8 items-center rounded-full px-2.5 text-xs font-medium transition",
-            value === option.id
-              ? "dashboard-navy-btn text-white"
-              : "text-current/70",
-          )}
-        >
-          {option.label}
         </button>
       ))}
     </div>
@@ -251,13 +190,13 @@ export function LessonLearningView({
   const [zoomIndex, setZoomIndex] = useState(saved.zoomIndex ?? 2);
   const [highlightMode, setHighlightMode] = useState(false);
   const [markerMode, setMarkerMode] = useState(false);
-  const [markerColor, setMarkerColor] = useState<MarkerColorId>(saved.markerColor ?? "yellow");
-  const [markerSize, setMarkerSize] = useState<MarkerSizeId>(saved.markerSize ?? "medium");
+  const [markerColor] = useState<MarkerColorId>(saved.markerColor ?? "yellow");
+  const [markerSize] = useState<MarkerSizeId>(saved.markerSize ?? "medium");
   const [markerStrokes, setMarkerStrokes] = useState<MarkerStroke[]>([]);
-  const [layout, setLayout] = useState<LayoutWidth>(saved.layout ?? "center");
+  const [layout] = useState<LayoutWidth>(saved.layout ?? "center");
   const [theme, setTheme] = useState<ReadingTheme>(() => resolveInitialTheme(saved));
-  const [spacing, setSpacing] = useState<LineSpacing>(saved.spacing ?? "normal");
-  const [focusMode, setFocusMode] = useState(saved.focusMode ?? false);
+  const [spacing] = useState<LineSpacing>(saved.spacing ?? "normal");
+  const [focusMode] = useState(saved.focusMode ?? false);
   const [scrollProgress, setScrollProgress] = useState(0);
 
   const fontSize = BASE_FONT_PX * ZOOM_STEPS[zoomIndex];
@@ -340,20 +279,6 @@ export function LessonLearningView({
     setHighlightMode((value) => !value);
   }, []);
 
-  const enableMarkerMode = useCallback(() => {
-    setHighlightMode(false);
-    setMarkerMode((value) => !value);
-  }, []);
-
-  const clearAnnotations = useCallback(() => {
-    clearHighlights(contentRef.current);
-    setMarkerStrokes([]);
-  }, []);
-
-  const undoMarkerStroke = useCallback(() => {
-    setMarkerStrokes((strokes) => strokes.slice(0, -1));
-  }, []);
-
   const applyHighlight = useCallback(() => {
     if (!highlightMode || !contentRef.current) return;
 
@@ -388,39 +313,28 @@ export function LessonLearningView({
       aria-label="Learning mode"
     >
       <header className="lesson-learning-header shrink-0 border-b px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-sm md:px-4 md:py-2.5">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-2">
-          <div className="flex items-center gap-2 md:contents">
+        <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-2 md:flex-row md:flex-wrap md:items-center md:gap-2">
+          <div className="flex min-w-0 items-center gap-2 md:contents">
             <button
               type="button"
               onClick={onExit}
-              className="lesson-learning-exit font-sans inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition sm:px-3.5"
+              aria-label="Close learning mode"
+              className="lesson-learning-close inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
             >
-              {Icons.exit}
-              <span className="sm:hidden">Back</span>
-              <span className="hidden sm:inline">Back to lesson</span>
+              <SidebarSvgIcon name="cross" size={24} strokeWidth={2.25} />
             </button>
 
             <div className="lesson-learning-meta flex min-w-0 flex-1 items-center gap-2 text-sm font-medium md:flex-initial">
-              <span className="lesson-learning-chip inline-flex h-7 shrink-0 items-center rounded-full px-2.5 text-xs font-semibold">
+              <span className="lesson-learning-chip inline-flex h-7 max-w-full shrink-0 items-center rounded-full px-2.5 text-xs font-semibold">
                 {currentIndex && total ? `${currentIndex} / ${total}` : `Lesson ${lesson.order}`}
               </span>
               {scrollProgress > 0 ? (
-                <span className="truncate text-xs opacity-70">{Math.round(scrollProgress)}% read</span>
+                <span className="min-w-0 truncate text-xs opacity-70">{Math.round(scrollProgress)}% read</span>
               ) : null}
             </div>
           </div>
 
-          <div className="lesson-learning-toolbar -mx-3 flex items-center gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-0.5 [scrollbar-width:none] md:mx-0 md:ml-auto md:flex-wrap md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden">
-            <IconSegmentedControl
-              ariaLabel="Reading width"
-              value={layout}
-              onChange={setLayout}
-              options={[
-                { id: "center", label: "Centered width", icon: Icons.center },
-                { id: "full", label: "Full width", icon: Icons.full },
-              ]}
-            />
-
+          <div className="lesson-learning-toolbar flex w-full min-w-0 flex-wrap items-center gap-1.5 md:ml-auto md:w-auto">
             <IconSegmentedControl
               ariaLabel="Reading theme"
               value={theme}
@@ -432,17 +346,6 @@ export function LessonLearningView({
               ]}
             />
 
-            <IconSegmentedControl
-              ariaLabel="Line spacing"
-              value={spacing}
-              onChange={setSpacing}
-              options={[
-                { id: "compact", label: "Tight spacing", icon: Icons.spacingTight },
-                { id: "normal", label: "Normal spacing", icon: Icons.spacingNormal },
-                { id: "relaxed", label: "Wide spacing", icon: Icons.spacingWide },
-              ]}
-            />
-
             <div className="lesson-learning-seg inline-flex shrink-0 items-center gap-0.5 rounded-full p-0.5">
               <ToolButton
                 label="Zoom out"
@@ -450,7 +353,7 @@ export function LessonLearningView({
                 onClick={() => setZoomIndex((index) => Math.max(0, index - 1))}
                 className="!bg-transparent"
               >
-                {Icons.zoomOut}
+                <SidebarSvgIcon name="minus" size={16} />
               </ToolButton>
               <span className="lesson-learning-meta min-w-[2.75rem] text-center text-xs font-semibold tabular-nums">
                 {zoomLabel}
@@ -461,17 +364,9 @@ export function LessonLearningView({
                 onClick={() => setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))}
                 className="!bg-transparent"
               >
-                {Icons.zoomIn}
+                <SidebarSvgIcon name="plus" size={16} />
               </ToolButton>
             </div>
-
-            <ToolButton
-              label="Focus reading"
-              active={focusMode}
-              onClick={() => setFocusMode((value) => !value)}
-            >
-              {Icons.focus}
-            </ToolButton>
 
             <ToolButton
               label="Text highlight"
@@ -479,53 +374,6 @@ export function LessonLearningView({
               onClick={enableHighlightMode}
             >
               {Icons.highlight}
-            </ToolButton>
-
-            <ToolButton
-              label="Freehand marker"
-              active={markerMode}
-              onClick={enableMarkerMode}
-            >
-              {Icons.marker}
-            </ToolButton>
-
-            {markerMode ? (
-              <>
-                <div className="flex shrink-0 items-center gap-1 px-0.5" role="group" aria-label="Marker colors">
-                  {MARKER_COLORS.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      aria-label={option.label}
-                      title={option.label}
-                      onClick={() => setMarkerColor(option.id)}
-                      className={cn(
-                        "h-5 w-5 rounded-full border-2 transition",
-                        markerColor === option.id ? "border-[#152744] scale-110" : "border-white/80",
-                      )}
-                      style={{ backgroundColor: option.value.replace(/[\d.]+\)$/, "0.85)") }}
-                    />
-                  ))}
-                </div>
-                <TextSegmentedControl
-                  ariaLabel="Marker size"
-                  value={markerSize}
-                  onChange={setMarkerSize}
-                  options={MARKER_SIZES.map((option) => ({ id: option.id, label: option.label }))}
-                />
-              </>
-            ) : null}
-
-            <ToolButton
-              label="Undo last marker stroke"
-              disabled={markerStrokes.length === 0}
-              onClick={undoMarkerStroke}
-            >
-              {Icons.undo}
-            </ToolButton>
-
-            <ToolButton label="Clear annotations" onClick={clearAnnotations}>
-              {Icons.clear}
             </ToolButton>
           </div>
         </div>
@@ -548,7 +396,7 @@ export function LessonLearningView({
         <article
           ref={articleRef}
           className={cn(
-            "lesson-learning-page relative mx-auto my-4 w-full px-4 py-5 transition-[max-width,padding,box-shadow] duration-300 sm:my-6 sm:px-6 sm:py-7 md:my-8 md:px-10 md:py-9",
+            "lesson-learning-page relative mx-auto my-3 w-full min-w-0 px-4 py-5 transition-[max-width,padding,box-shadow] duration-300 sm:my-6 sm:px-6 sm:py-7 md:my-8 md:px-10 md:py-9",
             layout === "center" ? "max-w-3xl" : "max-w-none lg:max-w-5xl",
           )}
         >
@@ -559,7 +407,7 @@ export function LessonLearningView({
                 Lesson {lesson.order}
               </span>
               {lesson.l2_name ? (
-                <span className="lesson-learning-tag inline-flex rounded-full px-3 py-1 text-xs font-medium">
+                <span className="lesson-learning-tag inline-flex max-w-full rounded-full px-3 py-1 text-xs font-medium break-words">
                   {lesson.l2_name}
                 </span>
               ) : null}
@@ -567,7 +415,7 @@ export function LessonLearningView({
           ) : null}
 
           <h1
-            className="lesson-learning-title font-sans font-bold leading-tight tracking-[0.01em] text-balance"
+            className="lesson-learning-title font-sans break-words font-bold leading-tight tracking-[0.01em] text-balance"
             style={{ fontSize: `${fontSize * 1.35}px`, lineHeight: 1.25 }}
           >
             {lesson.title}
@@ -638,11 +486,11 @@ export function LearningModeToggle({
       disabled={disabled}
       aria-pressed={active}
       className={cn(
-        "dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10",
+        "lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white",
         disabled && "cursor-not-allowed opacity-50",
       )}
     >
-      {Icons.focus}
+      {Icons.book}
       {active ? "Learning mode on" : "Learning mode"}
     </button>
   );

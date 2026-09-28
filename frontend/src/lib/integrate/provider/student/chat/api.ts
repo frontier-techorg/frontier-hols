@@ -1,4 +1,5 @@
-import { apiRequest } from "@/lib/integrate/client";
+import { apiRequest, ApiRequestError } from "@/lib/integrate/client";
+import { getStoredUser } from "@/lib/integrate/auth/storage";
 import {
   ACTIVE_PATIENT_STORAGE_KEY,
   ADVISER_CACHE_PREFIX,
@@ -9,6 +10,7 @@ import type {
   ChatInfo,
   IntakeAnswers,
   IntakeEvaluation,
+  ChatReply,
   PatientDetail,
   PatientListData,
   PatientListParams,
@@ -20,7 +22,39 @@ const adviserMemoryCache = new Map<string, unknown>();
 const adviserPendingRequests = new Map<string, Promise<unknown>>();
 
 function cacheKey(kind: string, ...parts: Array<string | number | undefined | null>) {
-  return [ADVISER_CACHE_PREFIX, kind, ...parts.map((part) => part ?? "")].join(":");
+  const userId = getStoredUser()?.user_id ?? "anonymous";
+  return [ADVISER_CACHE_PREFIX, userId, kind, ...parts.map((part) => part ?? "")].join(":");
+}
+
+type StoredActivePatient = {
+  userId: string;
+  patientId: string;
+};
+
+export function readStoredActivePatientId(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const userId = getStoredUser()?.user_id;
+  const raw = window.sessionStorage.getItem(ACTIVE_PATIENT_STORAGE_KEY);
+  if (!userId || !raw) {
+    if (raw) window.sessionStorage.removeItem(ACTIVE_PATIENT_STORAGE_KEY);
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw) as StoredActivePatient;
+    if (parsed.userId === userId && parsed.patientId) return parsed.patientId;
+  } catch {
+    // A bare id from an earlier session is not tied to this account.
+  }
+  window.sessionStorage.removeItem(ACTIVE_PATIENT_STORAGE_KEY);
+  return undefined;
+}
+
+export function writeStoredActivePatientId(patientId: string) {
+  if (typeof window === "undefined") return;
+  const userId = getStoredUser()?.user_id;
+  if (!userId) return;
+  const value: StoredActivePatient = { userId, patientId };
+  window.sessionStorage.setItem(ACTIVE_PATIENT_STORAGE_KEY, JSON.stringify(value));
 }
 
 function readSessionCache<T>(key: string): T | null {
@@ -125,12 +159,7 @@ export function getCachedPatient(
 }
 
 export function prefetchAdviserBootstrap(patientId?: string) {
-  const storedPatientId =
-    patientId ??
-    (typeof window !== "undefined"
-      ? window.sessionStorage.getItem(ACTIVE_PATIENT_STORAGE_KEY) ?? undefined
-      : undefined);
-  return getAdviserBootstrap(storedPatientId);
+  return getAdviserBootstrap(patientId ?? readStoredActivePatientId());
 }
 
 export async function getAdviserBootstrap(patientId?: string): Promise<AdviserBootstrapData> {
@@ -139,10 +168,19 @@ export async function getAdviserBootstrap(patientId?: string): Promise<AdviserBo
     search.set("patient_id", patientId);
   }
   const query = search.toString();
-  return cachedAdviserRequest<AdviserBootstrapData>(
-    bootstrapCacheKey(patientId),
-    `/api/chat/bootstrap${query ? `?${query}` : ""}`,
-  );
+  try {
+    return await cachedAdviserRequest<AdviserBootstrapData>(
+      bootstrapCacheKey(patientId),
+      `/api/chat/bootstrap${query ? `?${query}` : ""}`,
+    );
+  } catch (err) {
+    if (!patientId || !(err instanceof ApiRequestError) || err.status !== 404) throw err;
+    window.sessionStorage.removeItem(ACTIVE_PATIENT_STORAGE_KEY);
+    return cachedAdviserRequest<AdviserBootstrapData>(
+      bootstrapCacheKey(undefined),
+      "/api/chat/bootstrap",
+    );
+  }
 }
 
 export async function getChatHealth(): Promise<ChatHealth> {
@@ -254,47 +292,12 @@ export async function recommendPatient(patientId: string): Promise<PatientDetail
   return patient;
 }
 
-export async function updatePatientBoard(
-  patientId: string,
-  input: {
-    confidence?: "conservative" | "balanced" | "aggressive" | string;
-    preferred?: string | null;
-    clear_preferred?: boolean;
-    focus_peptides?: string[];
-  },
-): Promise<PatientDetail> {
-  const patient = await apiRequest<PatientDetail>(`/api/chat/patients/${patientId}/board`, {
+export async function sendPatientMessage(patientId: string, query: string): Promise<ChatReply> {
+  const reply = await apiRequest<ChatReply>(`/api/chat/patients/${patientId}/messages`, {
     method: "POST",
     auth: true,
-    body: {
-      confidence: input.confidence,
-      preferred: input.preferred ?? undefined,
-      clear_preferred: input.clear_preferred ?? false,
-      ...(input.focus_peptides !== undefined ? { focus_peptides: input.focus_peptides } : {}),
-    },
+    body: { query },
   });
-  const patientKey = patientCacheKey(patientId, true);
-  adviserMemoryCache.set(patientKey, patient);
-  writeSessionCache(patientKey, patient);
   invalidateAdviserCache(patientId);
-  return patient;
-}
-
-export async function sendPatientMessage(
-  patientId: string,
-  question: string,
-  options?: { focusPeptides?: string[] },
-): Promise<PatientDetail> {
-  const patient = await apiRequest<PatientDetail>(`/api/chat/patients/${patientId}/messages`, {
-    method: "POST",
-    auth: true,
-    body: {
-      question,
-      focus_peptides: options?.focusPeptides?.filter(Boolean) ?? [],
-    },
-  });
-  const patientKey = patientCacheKey(patientId, true);
-  adviserMemoryCache.set(patientKey, patient);
-  writeSessionCache(patientKey, patient);
-  return patient;
+  return reply;
 }

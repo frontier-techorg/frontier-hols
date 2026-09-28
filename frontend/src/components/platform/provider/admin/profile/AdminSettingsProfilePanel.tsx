@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
+import { Button } from "@/components/ui/Button";
 import { SkeletonBlock } from "@/components/platform/provider/student/DashboardSkeletons";
 import { ApiRequestError } from "@/lib/integrate/client";
 import { getStoredUser, updateStoredProfile } from "@/lib/integrate/auth/storage";
@@ -192,7 +193,7 @@ export function AdminSettingsProfilePanel({
   if (!profile) {
     return (
       <section
-        className="dashboard-glass-card min-w-0 rounded-2xl p-4 sm:p-5 md:p-6"
+        className="min-w-0 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white p-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5 md:p-6"
         aria-busy="true"
         aria-label="Loading profile"
       >
@@ -210,7 +211,7 @@ export function AdminSettingsProfilePanel({
   }
 
   return (
-    <section className="dashboard-glass-card min-w-0 rounded-2xl p-4 sm:p-5 md:p-6">
+    <section className="min-w-0 rounded-2xl border border-[color:var(--dash-surface-border)] bg-white p-4 shadow-[0_8px_28px_rgba(20,38,68,0.06)] sm:p-5 md:p-6">
       <h2 className="font-sans text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg">
         Profile information
       </h2>
@@ -272,22 +273,22 @@ export function AdminSettingsProfilePanel({
           </span>
         </label>
 
-        <div className="mt-1 flex flex-col-reverse gap-2 border-t border-[color:var(--dash-surface-border)] pt-4 sm:flex-row sm:items-center sm:justify-end sm:gap-2.5">
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2.5">
           <button
             type="button"
             onClick={resetForm}
             disabled={!hasChanges || saving}
-            className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
           >
             Cancel
           </button>
-          <button
+          <Button
             type="submit"
             disabled={saving || !hasChanges}
-            className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-6 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-60 sm:min-h-10 sm:w-auto sm:min-w-[10rem]"
+            className="lecture-page-action h-10 w-full px-5 py-0 text-sm sm:w-auto sm:min-w-[9rem]"
           >
             {saving ? "Saving…" : "Save changes"}
-          </button>
+          </Button>
         </div>
       </form>
     </section>

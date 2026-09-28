@@ -14,6 +14,7 @@ export type PlanMeta = {
 export const PLAN_META: Record<PlanType, PlanMeta> = {
   monthly: {
     period: "per month",
+    badge: "Flexible",
     features: ["Lecture library", "Calculator tools", "AI adviser"],
     icon: "clock",
   },

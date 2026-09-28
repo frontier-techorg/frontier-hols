@@ -4,27 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Icon,
   Copy,
-  ThumbsDown,
-  ThumbsUp,
 } from "@/components/icons";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
-import { AdviserBoardDrawer } from "@/components/platform/provider/student/adviser/AdviserBoardDrawer";
 import { MarkdownContent } from "@/components/platform/provider/student/adviser/MarkdownContent";
-import { PeptideFocusSelect } from "@/components/platform/provider/student/adviser/PeptideFocusSelect";
-import {
-  rankedFocusNames,
-  samePeptideNames,
-  talkAboutHeaderLabel,
-  talkAboutTitle,
-} from "@/components/platform/provider/student/adviser/talkAbout";
+import { lectureVialSrc } from "@/components/platform/provider/student/lectures/courseCover";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import { ChatMessagesSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
 import { ApiRequestError } from "@/lib/integrate/client";
 import {
   getPatientMessages,
   sendPatientMessage,
-  updatePatientBoard,
-  type BoardConfidence,
   type ChatMessagesPagination,
   type PatientDetail,
   type RecommendationBoard,
@@ -36,9 +25,6 @@ import { cn } from "@/lib/utils";
 type AdviserChatPanelProps = {
   patient: PatientDetail;
   onPatientChange?: (patient: PatientDetail) => void;
-  boardOpen?: boolean;
-  onBoardOpenChange?: (open: boolean) => void;
-  onBoardUpdated?: () => void;
 };
 
 type DisplayMessage = StoredChatMessage & {
@@ -64,78 +50,49 @@ function createTypingMessage(): DisplayMessage {
   return {
     message_id: `${TEMP_ASSISTANT_PREFIX}${Date.now()}`,
     role: "assistant",
-    content: "Thinking…",
+    content: "",
     created_at: new Date().toISOString(),
     kind: "message",
     pending: true,
   };
 }
 
-function chipToQuestion(chip: string, board: RecommendationBoard): string {
-  const top = board.ranked[0]?.name;
-  const second = board.ranked[1]?.name;
-  switch (chip) {
-    case "Why #1?":
-      return top
-        ? `In ≤3 short bullets: why is ${top} #1 for this patient?`
-        : "In ≤3 short bullets: why is this the top recommendation?";
-    case "Compare top 2":
-      return top && second
-        ? `Compare ${top} vs ${second} in ≤4 short bullets. Which fits better?`
-        : "Compare the top two peptides in ≤4 short bullets.";
-    case "Safety flags":
-      return "List only the key safety flags/cautions for this case as short bullets.";
-    case "Labs checklist":
-      return "Baseline labs checklist only — short bullets, no prose.";
-    case "Draft clinical note":
-      return "Draft a 4–6 line clinical note for the record. No fluff.";
-    default:
-      return `${chip} Reply briefly.`;
-  }
+function shortQuestion(question: string) {
+  const words = question.replace(/\s+/g, " ").trim().replace(/\?+$/, "").split(" ").filter(Boolean);
+  if (words.length === 0) return question.trim();
+  return `${words.slice(0, 6).join(" ")}?`;
 }
 
-function peptideActionQuestion(
-  peptide: RecommendationBoardPeptide,
-  action: "why" | "compare" | "safety",
-  board: RecommendationBoard,
-  selectedNames: string[],
-): string {
-  if (action === "why") {
-    return `In ≤3 bullets: why is ${peptide.name} ranked #${peptide.rank}?`;
-  }
-  if (action === "safety") {
-    return `Safety/monitoring for ${peptide.name} — short bullets only.`;
-  }
-  const compareNames =
-    selectedNames.length >= 2
-      ? selectedNames
-      : [
-          peptide.name,
-          board.ranked.find((item) => item.name !== peptide.name)?.name,
-        ].filter(Boolean) as string[];
-  return compareNames.length >= 2
-    ? `Compare ${compareNames.join(" vs ")} in ≤4 short bullets. Which fits better?`
-    : `Clinical fit of ${peptide.name} — ≤3 short bullets.`;
+function suggestedQuestions(board: RecommendationBoard | null) {
+  const source = board?.suggested_questions?.length ? board.suggested_questions : board?.chips ?? [];
+  return source.map(shortQuestion).filter(Boolean).slice(0, 3);
+}
+
+function peptideReasons(peptide: RecommendationBoardPeptide, summary: string) {
+  const why = (peptide.why ?? []).filter(Boolean);
+  if (why.length > 0) return why;
+  const fit = peptide.fit?.trim();
+  if (fit && fit !== summary) return [fit];
+  return [];
+}
+
+function rankLabel(rank: number) {
+  if (rank === 1) return "Top pick";
+  if (rank === 2) return "Alternative";
+  if (rank === 3) return "Supporting";
+  return `Option ${rank}`;
 }
 
 export function AdviserChatPanel({
   patient,
   onPatientChange,
-  boardOpen = false,
-  onBoardOpenChange,
-  onBoardUpdated,
 }: AdviserChatPanelProps) {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [isUpdatingBoard, setIsUpdatingBoard] = useState(false);
   const [board, setBoard] = useState<RecommendationBoard | null>(
     patient.recommendation_board ?? null,
   );
-  const [focusNames, setFocusNames] = useState<string[]>(() =>
-    rankedFocusNames(patient.recommendation_board),
-  );
-  const focusSaveTimerRef = useRef<number | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [pagination, setPagination] = useState<ChatMessagesPagination | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -149,19 +106,7 @@ export function AdviserChatPanel({
 
   useEffect(() => {
     setBoard(patient.recommendation_board ?? null);
-    const stored = rankedFocusNames(patient.recommendation_board);
-    setFocusNames((current) => {
-      if (current.length > 0 && samePeptideNames(current, stored)) return current;
-      if (stored.length > 0) return stored;
-      return current;
-    });
   }, [patient.patient_id, patient.recommendation_board]);
-
-  useEffect(() => {
-    return () => {
-      if (focusSaveTimerRef.current) window.clearTimeout(focusSaveTimerRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     if (initializedPatientRef.current === patient.patient_id) return;
@@ -203,6 +148,16 @@ export function AdviserChatPanel({
   }, [patient.patient_id]);
 
   useEffect(() => {
+    const incoming = (patient.messages ?? []).find((item) => item.kind === "recommendation");
+    if (!incoming?.content) return;
+    setMessages((current) =>
+      current.map((item) =>
+        item.kind === "recommendation" ? { ...item, content: incoming.content } : item,
+      ),
+    );
+  }, [patient.messages, patient.patient_id]);
+
+  useEffect(() => {
     const last = messages[messages.length - 1];
     const lastId = last?.message_id ?? null;
     const replyArrived =
@@ -240,21 +195,6 @@ export function AdviserChatPanel({
       ro?.disconnect();
     };
   }, [messages, isSending, board]);
-
-  const applyPatientUpdate = useCallback(
-    (updated: PatientDetail) => {
-      setMessages(updated.messages ?? []);
-      setPagination(updated.messages_pagination ?? null);
-      if (updated.recommendation_board) {
-        setBoard(updated.recommendation_board);
-      }
-      if (updated.messages?.some((message) => message.kind === "board_update")) {
-        onBoardUpdated?.();
-      }
-      onPatientChange?.(updated);
-    },
-    [onBoardUpdated, onPatientChange],
-  );
 
   const loadOlderMessages = useCallback(async () => {
     if (!pagination?.has_older || !pagination.oldest_message_id || isLoadingOlder) return;
@@ -314,7 +254,7 @@ export function AdviserChatPanel({
   }, [loadOlderMessages]);
 
   const sendQuestion = useCallback(
-    async (question: string, focusOverride?: string[]) => {
+    async (question: string) => {
       const trimmed = question.trim();
       const used =
         patient.turns_used ??
@@ -324,7 +264,6 @@ export function AdviserChatPanel({
 
       const optimisticMessage = createTempUserMessage(trimmed);
       const typingMessage = createTypingMessage();
-      const focusPeptides = (focusOverride ?? focusNames).filter(Boolean);
 
       setInput("");
       setError(null);
@@ -337,10 +276,31 @@ export function AdviserChatPanel({
       }
 
       try {
-        const updated = await sendPatientMessage(patient.patient_id, trimmed, {
-          focusPeptides,
+        const reply = await sendPatientMessage(patient.patient_id, trimmed);
+        const suggestions = (reply.suggested_questions ?? []).map(shortQuestion).filter(Boolean).slice(0, 3);
+        setMessages((current) =>
+          current
+            .filter((message) => message.message_id !== typingMessage.message_id)
+            .map((message) =>
+              message.message_id === optimisticMessage.message_id
+                ? { ...message, pending: false }
+                : message,
+            )
+            .concat({
+              message_id: `${TEMP_ASSISTANT_PREFIX}reply-${Date.now()}`,
+              role: "assistant",
+              content: reply.answer,
+              created_at: new Date().toISOString(),
+              kind: "message",
+              suggested_questions: suggestions,
+            }),
+        );
+        onPatientChange?.({
+          ...patient,
+          status: "chatting",
+          turns_used: used + 1,
+          messages: undefined as unknown as PatientDetail["messages"],
         });
-        applyPatientUpdate(updated);
       } catch (err) {
         setMessages((current) =>
           current.filter(
@@ -357,81 +317,16 @@ export function AdviserChatPanel({
       }
     },
     [
-      applyPatientUpdate,
-      focusNames,
       isSending,
       messages,
-      patient.patient_id,
-      patient.recommendation,
-      patient.turns_max,
-      patient.turns_used,
+      onPatientChange,
+      patient,
     ],
   );
 
   const sendMessage = useCallback(async () => {
     await sendQuestion(input);
   }, [input, sendQuestion]);
-
-  const handleBoardUpdate = useCallback(
-    async (inputUpdate: {
-      confidence?: BoardConfidence;
-      preferred?: string | null;
-      clear_preferred?: boolean;
-    }) => {
-      if (isUpdatingBoard || isSending || !patient.recommendation) return;
-      setIsUpdatingBoard(true);
-      setError(null);
-      shouldStickToBottomRef.current = true;
-      try {
-        const updated = await updatePatientBoard(patient.patient_id, inputUpdate);
-        applyPatientUpdate(updated);
-        onBoardUpdated?.();
-      } catch (err) {
-        setError(
-          err instanceof ApiRequestError ? err.message : "Could not update recommendation board.",
-        );
-      } finally {
-        setIsUpdatingBoard(false);
-      }
-    },
-    [applyPatientUpdate, isSending, isUpdatingBoard, onBoardUpdated, patient.patient_id, patient.recommendation],
-  );
-
-  const applyFocusNames = useCallback(
-    (names: string[]) => {
-      const next = names.filter(Boolean);
-      if (next.length === 0) return;
-      setFocusNames(next);
-      setBoard((current) => (current ? { ...current, focus_peptides: next } : current));
-      const nextBoard = board
-        ? { ...board, focus_peptides: next }
-        : patient.recommendation_board
-          ? { ...patient.recommendation_board, focus_peptides: next }
-          : null;
-      if (nextBoard) {
-        onPatientChange?.({
-          ...patient,
-          recommendation_board: nextBoard,
-          messages: undefined as unknown as PatientDetail["messages"],
-        });
-      }
-      if (focusSaveTimerRef.current) window.clearTimeout(focusSaveTimerRef.current);
-      focusSaveTimerRef.current = window.setTimeout(() => {
-        void updatePatientBoard(patient.patient_id, { focus_peptides: next })
-          .then((updated) => {
-            if (updated.recommendation_board) {
-              setBoard(updated.recommendation_board);
-            }
-          })
-          .catch((err) => {
-            setError(
-              err instanceof ApiRequestError ? err.message : "Could not save selected peptides.",
-            );
-          });
-      }, 350);
-    },
-    [board, onPatientChange, patient],
-  );
 
   /** Cap composer to ~3 lines of body text, then scroll. */
   const COMPOSER_MAX_LINES = 3;
@@ -490,7 +385,6 @@ export function AdviserChatPanel({
     }
   }, []);
 
-  const busy = isSending || isUpdatingBoard;
   const turnsUsed =
     patient.turns_used ??
     messages.filter((message) => message.role === "user" && (message.kind ?? "message") === "message")
@@ -498,27 +392,22 @@ export function AdviserChatPanel({
   const turnsMax = patient.turns_max ?? DEFAULT_CHAT_MAX_TURNS;
   const turnsLeft = Math.max(0, turnsMax - turnsUsed);
   const atTurnLimit = turnsLeft <= 0;
-  const composerLocked = busy || atTurnLimit || !patient.recommendation;
-  const talkingPeptide =
-    board?.ranked.find((item) => item.name === focusNames[0]) ?? board?.ranked[0] ?? null;
-  const currentPeptideName = talkAboutHeaderLabel(focusNames) ?? talkingPeptide?.name;
-  const composerPlaceholder = atTurnLimit
-    ? "Turn limit reached"
-    : focusNames.length === 1
-      ? `Ask about ${focusNames[0]}…`
-      : focusNames.length > 1
-        ? `Ask about ${focusNames.length} peptides…`
-        : "Ask about this case…";
-  const openBoard = () => onBoardOpenChange?.(true);
+  const composerLocked = isSending || atTurnLimit || !patient.recommendation;
+  const composerPlaceholder = atTurnLimit ? "Turn limit reached" : "Ask about this case...";
+  const starterQuestions = suggestedQuestions(board);
+  const latestAnswerId = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant" && !message.pending && message.kind !== "recommendation")
+    ?.message_id;
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <div
         ref={scrollContainerRef}
-        className="adviser-chat-transcript min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 sm:px-4 md:px-6 lg:px-8"
+        className="adviser-chat-transcript min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 md:px-11"
         data-lenis-prevent
       >
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 py-3 sm:gap-7 sm:py-5">
+        <div className="mx-auto flex w-full max-w-[54rem] flex-col gap-4 pb-8 pt-[37px]">
           {pagination?.has_older ? (
             <div className="flex justify-center">
               <button
@@ -542,15 +431,12 @@ export function AdviserChatPanel({
           {isLoadingMessages ? <ChatMessagesSkeleton /> : null}
 
           {!isLoadingMessages && messages.length === 0 ? (
-            <div className="adviser-chat-empty dashboard-glass-card flex flex-col items-center justify-center rounded-2xl px-5 py-10 text-center sm:py-12">
-              <span className="dashboard-tool-icon flex h-12 w-12 items-center justify-center rounded-full text-[color:var(--dash-text)]" aria-hidden>
-                <SidebarSvgIcon name="adviser" size={22} strokeWidth={1.75} />
-              </span>
-              <p className="font-sans mt-4 text-base font-semibold text-[color:var(--dash-text)]">
+            <div className="adviser-chat-empty adviser-chat-card flex flex-col items-center justify-center rounded-2xl px-5 py-10 text-center sm:py-12">
+              <p className="font-sans text-base font-semibold text-[color:var(--dash-text)]">
                 Ask about this case
               </p>
               <p className="text-brand-caption mt-1.5 max-w-[20rem] text-[color:var(--dash-muted)]">
-                Choose one peptide or several in the composer, then ask a question.
+                Ask a question about this case. The reply covers the full shortlist.
               </p>
             </div>
           ) : null}
@@ -560,9 +446,20 @@ export function AdviserChatPanel({
               key={message.message_id}
               message={message}
               copied={copiedId === message.message_id}
-              peptideName={currentPeptideName}
+              board={message.kind === "recommendation" ? board : null}
+              patientName={patient.display_name}
+              questions={
+                message.kind === "recommendation"
+                  ? latestAnswerId
+                    ? []
+                    : starterQuestions.slice(0, 3)
+                  : message.message_id === latestAnswerId
+                    ? (message.suggested_questions ?? []).map(shortQuestion).filter(Boolean).slice(0, 3)
+                    : []
+              }
+              questionsDisabled={composerLocked}
+              onAsk={(question) => void sendQuestion(question)}
               onCopy={() => void copyMessage(message.message_id, message.content)}
-              onOpenBoard={openBoard}
             />
           ))}
 
@@ -574,61 +471,15 @@ export function AdviserChatPanel({
         </div>
       </div>
 
-      <footer className="adviser-chat-composer-bar shrink-0 px-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2 sm:px-4 sm:pb-4 sm:pt-3 md:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-4xl">
-          {focusNames.length > 0 ? (
-            <div className="adviser-focus-bar">
-              <div className="adviser-focus-copy">
-                <p className="adviser-focus-title">{talkAboutTitle(focusNames)}</p>
-                <div className="adviser-focus-chips" aria-label="Selected peptides">
-                  {focusNames.map((name) => (
-                    <span
-                      key={name}
-                      className={cn("adviser-focus-chip", focusNames.length === 1 && "is-solo")}
-                    >
-                      <span className="adviser-focus-chip-name">{name}</span>
-                      {focusNames.length > 1 ? (
-                        <button
-                          type="button"
-                          aria-label={`Stop talking about ${name}`}
-                          disabled={composerLocked}
-                          className="adviser-onboarding-close adviser-focus-chip-remove"
-                          onClick={() =>
-                            applyFocusNames(focusNames.filter((item) => item !== name))
-                          }
-                        >
-                          <SidebarSvgIcon name="cross" size={16} strokeWidth={2.15} />
-                        </button>
-                      ) : null}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <span className="text-brand-caption shrink-0 pt-0.5 text-[color:var(--dash-faint)]">
-                {atTurnLimit ? `${turnsMax}-turn limit reached` : `${turnsUsed} of ${turnsMax} turns`}
-              </span>
-            </div>
-          ) : (
-            <p className="text-brand-caption mb-1.5 text-[color:var(--dash-faint)]">
-              {atTurnLimit ? `${turnsMax}-turn limit reached` : `${turnsUsed} of ${turnsMax} turns`}
-            </p>
-          )}
+      <footer className="adviser-chat-composer-bar shrink-0 px-4 pb-[max(31px,env(safe-area-inset-bottom))] pt-2 sm:px-6 md:px-11">
+        <div className="mx-auto w-full max-w-[54rem]">
           <form
-            className="adviser-chat-composer dashboard-glass-card flex w-full items-end gap-1.5 overflow-visible rounded-2xl px-1.5 py-1.5 sm:items-center sm:gap-2 sm:px-3 sm:py-2"
+            className="adviser-chat-composer flex w-full items-center gap-2 overflow-hidden rounded-full"
             onSubmit={(event) => {
               event.preventDefault();
               if (!composerLocked) void sendMessage();
             }}
           >
-            {board ? (
-              <PeptideFocusSelect
-                peptides={board.ranked}
-                selected={focusNames}
-                disabled={composerLocked}
-                onChange={applyFocusNames}
-              />
-            ) : null}
-
             <div className="adviser-chat-composer-field min-w-0 flex-1">
               <textarea
                 ref={composerRef}
@@ -639,58 +490,33 @@ export function AdviserChatPanel({
                 rows={1}
                 placeholder={composerPlaceholder}
                 spellCheck={false}
-                className="adviser-chat-composer-input text-brand-body min-h-[44px] w-full resize-none border-0 bg-transparent px-1 py-2.5 leading-6 text-[color:var(--dash-text)] shadow-none outline-none ring-0 placeholder:text-[color:var(--dash-faint)] focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 disabled:opacity-60 sm:px-2"
+                className="adviser-chat-composer-input w-full resize-none border-0 bg-transparent shadow-none outline-none ring-0 focus:border-0 focus:shadow-none focus:outline-none focus:ring-0 disabled:opacity-60"
                 aria-describedby="adviser-composer-hint"
               />
             </div>
             <span id="adviser-composer-hint" className="sr-only">
-              Press Enter to send. Press Ctrl+Enter for a new line. Use the peptide icon to choose one peptide or several.
+              Press Enter to send. Press Ctrl+Enter for a new line.
             </span>
             <button
               type="submit"
               disabled={composerLocked || !input.trim()}
               aria-label="Send message"
               className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-full self-end transition sm:self-center",
+                "adviser-chat-composer-send-btn flex shrink-0 items-center justify-center rounded-full transition",
                 input.trim() && !composerLocked
-                  ? "dashboard-navy-btn"
+                  ? "adviser-chat-composer-send"
                   : "adviser-chat-composer-send-idle",
               )}
             >
               {isSending ? (
                 <SidebarSvgIcon name="spinner" size={16} strokeWidth={2.4} className="animate-spin" />
               ) : (
-                <SidebarSvgIcon name="send" size={17} />
+                <SidebarSvgIcon name="send" size={20} strokeWidth={2.25} />
               )}
             </button>
           </form>
         </div>
       </footer>
-
-      {board && boardOpen ? (
-        <AdviserBoardDrawer
-          board={board}
-          disabled={busy}
-          isUpdating={isUpdatingBoard}
-          onClose={() => onBoardOpenChange?.(false)}
-          onConfidenceChange={(confidence) => void handleBoardUpdate({ confidence })}
-          onPrefer={(name) => void handleBoardUpdate({ preferred: name })}
-          onClearPreferred={() => void handleBoardUpdate({ clear_preferred: true })}
-          onChip={(chip) => void sendQuestion(chipToQuestion(chip, board))}
-          onAskAbout={(peptide, action) => {
-            const nextFocus = focusNames.includes(peptide.name)
-              ? focusNames
-              : [...focusNames, peptide.name];
-            if (nextFocus !== focusNames) applyFocusNames(nextFocus);
-            void sendQuestion(
-              peptideActionQuestion(peptide, action, board, nextFocus),
-              nextFocus,
-            );
-          }}
-          selectedNames={focusNames}
-          onSelectPeptides={applyFocusNames}
-        />
-      ) : null}
     </div>
   );
 }
@@ -698,96 +524,429 @@ export function AdviserChatPanel({
 function ChatMessageRow({
   message,
   copied,
-  peptideName,
+  board,
+  patientName,
+  questions,
+  questionsDisabled,
+  onAsk,
   onCopy,
-  onOpenBoard,
 }: {
   message: DisplayMessage;
   copied: boolean;
-  peptideName?: string;
+  board?: RecommendationBoard | null;
+  patientName?: string;
+  questions?: string[];
+  questionsDisabled?: boolean;
+  onAsk?: (question: string) => void;
   onCopy: () => void;
-  onOpenBoard: () => void;
 }) {
   const isUser = message.role === "user";
 
   if (isUser) {
     return (
-      <div className="flex justify-end pl-4 sm:pl-16">
-        <div
-          className={cn(
-            "adviser-chat-user max-w-[min(100%,20rem)] rounded-2xl px-3.5 py-2.5 sm:max-w-[min(100%,28rem)] sm:px-4",
-            message.pending && "opacity-80",
-          )}
-        >
-          <p className="text-brand-body whitespace-pre-wrap break-words leading-[1.5] text-inherit">
-            {message.content}
-          </p>
+      <div className="adviser-chat-row adviser-chat-row--user">
+        <div className="adviser-chat-bubble-wrap adviser-chat-bubble-wrap--user">
+          <p className="adviser-chat-role adviser-chat-role--user">You</p>
+          <div
+            className={cn(
+              "adviser-chat-user",
+              message.pending && "adviser-chat-user--pending",
+            )}
+          >
+            <p className="adviser-chat-user-text whitespace-pre-wrap break-words">{message.content}</p>
+          </div>
         </div>
       </div>
     );
   }
 
   if (message.kind === "board_update") {
+    return <p className="adviser-chat-system">Selection updated</p>;
+  }
+
+  if (message.kind === "recommendation") {
+    const ranked = (board?.ranked ?? []).slice(0, 3);
+    const goal = board?.primary_goal ? String(board.primary_goal) : null;
     return (
-      <div className="flex justify-center py-1">
-        <button
-          type="button"
-          onClick={onOpenBoard}
-          className="dashboard-pill-soft font-sans inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-medium text-[color:var(--dash-text)]"
-        >
-          <span className="adviser-chat-board-dot" aria-hidden />
-          Board updated
-          {peptideName ? (
-            <span className="max-w-[10rem] truncate text-[color:var(--dash-muted)]">· {peptideName}</span>
-          ) : null}
-        </button>
+      <div className="adviser-chat-row adviser-chat-row--assistant">
+        <AssistantFrame board>
+          <div className="adviser-chat-ai-block grid gap-3">
+            <RecommendationTable
+              peptides={ranked}
+              goal={goal}
+              message={message.content}
+              patientName={patientName}
+              disabled={questionsDisabled}
+              onSelect={
+                onAsk
+                  ? (name) => onAsk(`Tell me the details of ${name} for this case.`)
+                  : undefined
+              }
+            />
+            {questions && questions.length > 0 ? (
+              <SuggestedQuestions
+                questions={questions}
+                disabled={questionsDisabled}
+                onAsk={onAsk}
+              />
+            ) : null}
+          </div>
+        </AssistantFrame>
+      </div>
+    );
+  }
+
+  if (message.pending) {
+    return (
+      <div className="adviser-chat-row adviser-chat-row--assistant">
+        <AssistantFrame>
+          <AdviserThinkingIndicator />
+        </AssistantFrame>
       </div>
     );
   }
 
   return (
-    <div
-      className={cn(
-        "adviser-chat-ai dashboard-glass-card w-full min-w-0 rounded-2xl px-4 py-3.5 sm:px-5 sm:py-4",
-        message.pending && "adviser-chat-ai--typing",
-      )}
-    >
-      {message.pending ? (
-        <div
-          className="adviser-chat-typing"
-          aria-live="polite"
-          aria-label="Assistant is replying"
-        >
-          <span className="adviser-chat-typing-dots" aria-hidden>
-            <span className="adviser-chat-typing-dot" />
-            <span className="adviser-chat-typing-dot" />
-            <span className="adviser-chat-typing-dot" />
-          </span>
-          <span className="adviser-chat-typing-label">Replying…</span>
-        </div>
-      ) : (
-        <>
-          <div className="text-brand-body adviser-chat-ai-body break-words text-[color:var(--dash-text)]">
+    <div className="adviser-chat-row adviser-chat-row--assistant">
+      <AssistantFrame>
+        <div className="adviser-chat-ai">
+          <div className="adviser-chat-ai-body break-words">
             <MarkdownContent content={message.content} className="adviser-chat-markdown" />
           </div>
-          <div className="adviser-chat-ai-actions mt-2 flex items-center gap-0.5 sm:mt-3">
+          <div className="adviser-chat-ai-actions">
             <MessageActionButton label={copied ? "Copied" : "Copy"} onClick={onCopy}>
               {copied ? (
-                <SidebarSvgIcon name="check" size={16} strokeWidth={2} />
+                <SidebarSvgIcon name="check" size={16} strokeWidth={1.6} />
               ) : (
-                <Icon icon={Copy} size={16} strokeWidth={1.7} />
+                <Icon icon={Copy} size={16} strokeWidth={1.6} />
               )}
-            </MessageActionButton>
-            <MessageActionButton label="Good response">
-              <Icon icon={ThumbsUp} size={16} strokeWidth={1.7} />
-            </MessageActionButton>
-            <MessageActionButton label="Bad response">
-              <Icon icon={ThumbsDown} size={16} strokeWidth={1.7} />
+              {copied ? <span>Copied</span> : null}
             </MessageActionButton>
           </div>
-        </>
-      )}
+          {questions && questions.length > 0 ? (
+            <SuggestedQuestions
+              questions={questions}
+              disabled={questionsDisabled}
+              onAsk={onAsk}
+            />
+          ) : null}
+        </div>
+      </AssistantFrame>
     </div>
+  );
+}
+
+function AssistantFrame({
+  children,
+  board = false,
+}: {
+  children: React.ReactNode;
+  board?: boolean;
+}) {
+  return (
+    <div className="adviser-assistant">
+      <span className="adviser-assistant-ball" aria-hidden>
+        <img src="/assets/ball/ball.png" alt="" width={37} height={37} />
+      </span>
+      <p className="adviser-assistant-label">AI Assistant</p>
+      <div className={cn("adviser-assistant-card", board && "adviser-assistant-card--board")}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SuggestedQuestions({
+  questions,
+  disabled,
+  onAsk,
+}: {
+  questions: string[];
+  disabled?: boolean;
+  onAsk?: (question: string) => void;
+}) {
+  return (
+    <div className="adviser-suggested">
+      <p className="adviser-suggested-label">Suggested questions</p>
+      <div className="adviser-suggested-row">
+        {questions.map((question) => (
+          <button
+            key={question}
+            type="button"
+            disabled={disabled}
+            onClick={() => onAsk?.(question)}
+            className="adviser-suggested-card"
+          >
+            <SuggestedQuestionIcon />
+            <span>{question}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SuggestedQuestionIcon() {
+  return (
+    <svg className="adviser-suggested-icon" viewBox="0 0 28 28" width="16" height="16" aria-hidden>
+      <path
+        d="M7.2 6.2h12.2c1.3 0 2.4 1.1 2.4 2.4v7.1c0 1.3-1.1 2.4-2.4 2.4h-6.1L8.4 22.2v-4.1H7.2c-1.3 0-2.4-1.1-2.4-2.4V8.6c0-1.3 1.1-2.4 2.4-2.4z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function AdviserThinkingIndicator() {
+  return (
+    <div
+      className="adviser-chat-thinking"
+      aria-live="polite"
+      aria-label="AI assistant is thinking"
+    >
+      <svg
+        className="adviser-chat-thinking-dots"
+        viewBox="0 0 40 12"
+        width="40"
+        height="12"
+        aria-hidden
+      >
+        <circle className="adviser-chat-thinking-dot" cx="6" cy="6" r="3.2" />
+        <circle className="adviser-chat-thinking-dot" cx="20" cy="6" r="3.2" />
+        <circle className="adviser-chat-thinking-dot" cx="34" cy="6" r="3.2" />
+      </svg>
+      <span className="adviser-chat-thinking-label">Thinking</span>
+    </div>
+  );
+}
+
+function RecommendationVial({ name, size }: { name: string; size: "feature" | "thumb" }) {
+  const src = lectureVialSrc(name);
+  if (!src) return null;
+
+  return (
+    <div className={cn("adviser-board-vial", size === "feature" ? "adviser-board-vial--feature" : "adviser-board-vial--thumb")} aria-hidden>
+      <img src={src} alt="" />
+    </div>
+  );
+}
+
+function CheckIcon({ soft = false }: { soft?: boolean }) {
+  return (
+    <svg className={cn("adviser-board-icon", soft ? "adviser-board-icon--soft" : "adviser-board-icon--check")} viewBox="0 0 16 16" aria-hidden>
+      <circle cx="8" cy="8" r="7" />
+      <path d="M5 8.2 7.1 10.2 11 6" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg className="adviser-board-icon adviser-board-icon--info" viewBox="0 0 16 16" aria-hidden>
+      <circle cx="8" cy="8" r="7" />
+      <path d="M8 7.2V11" />
+      <path d="M8 5.1h.01" />
+    </svg>
+  );
+}
+
+function NoteList({ items, tone }: { items: string[]; tone: "pro" | "watch" }) {
+  if (items.length === 0) return null;
+  return (
+    <ul className="adviser-board-notes">
+      {items.map((item) => (
+        <li key={item}>
+          {tone === "pro" ? <CheckIcon /> : <InfoIcon />}
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function DetailsButton({
+  name,
+  disabled,
+  onSelect,
+}: {
+  name: string;
+  disabled?: boolean;
+  onSelect?: (name: string) => void;
+}) {
+  if (!onSelect) return null;
+  return (
+    <button
+      type="button"
+      className="adviser-board-details"
+      disabled={disabled}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(name);
+      }}
+    >
+      View Details
+      <span aria-hidden>→</span>
+    </button>
+  );
+}
+
+function RecommendationTable({
+  peptides,
+  goal,
+  message,
+  patientName,
+  disabled = false,
+  onSelect,
+}: {
+  peptides: RecommendationBoardPeptide[];
+  goal?: string | null;
+  message: string;
+  patientName?: string;
+  disabled?: boolean;
+  onSelect?: (name: string) => void;
+}) {
+  const lead = peptides[0];
+  const rest = peptides.slice(1, 3);
+  const titleName = (patientName || "").trim() || "this case";
+
+  return (
+      <section className="adviser-board" aria-label="Recommended peptides">
+      <header className="adviser-board-head">
+        <div className="adviser-board-intro">
+          <h2>Recommendations for {titleName}</h2>
+          <p>
+            {peptides.length > 0
+              ? "Based on your profile, goals and medical history, here are the best peptide options for this case."
+              : message}
+          </p>
+        </div>
+        {goal ? <p className="adviser-board-goal">{goal}</p> : null}
+      </header>
+
+      {lead ? (
+        <FeatureCard peptide={lead} disabled={disabled} onSelect={onSelect} />
+      ) : null}
+
+      {rest.length > 0 ? (
+        <div className="adviser-board-grid">
+          {rest.map((peptide) => (
+            <OptionCard key={`${peptide.rank}-${peptide.name}`} peptide={peptide} disabled={disabled} onSelect={onSelect} />
+          ))}
+        </div>
+      ) : null}
+      </section>
+  );
+}
+
+function FeatureCard({
+  peptide,
+  disabled,
+  onSelect,
+}: {
+  peptide: RecommendationBoardPeptide;
+  disabled?: boolean;
+  onSelect?: (name: string) => void;
+}) {
+  const summary = (peptide.description || peptide.fit || "").trim();
+  const reasons = peptideReasons(peptide, summary);
+  const fit = reasons[0] || summary;
+  const pros = (peptide.advantages ?? []).filter(Boolean).slice(0, 2);
+  const cons = (peptide.disadvantages ?? []).filter(Boolean).slice(0, 2);
+  const evidence = peptide.evidence?.trim();
+  const clickable = Boolean(onSelect) && !disabled;
+
+  return (
+    <article
+      className={cn("adviser-feature", clickable && "adviser-feature--clickable")}
+      onClick={clickable ? () => onSelect?.(peptide.name) : undefined}
+    >
+      <RecommendationVial name={peptide.name} size="feature" />
+      <div className="adviser-feature-body">
+        <span className="adviser-badge adviser-badge--top">{rankLabel(peptide.rank)}</span>
+        <div className="adviser-feature-title">
+          <h3>{peptide.name}</h3>
+          {evidence ? (
+            <span className="adviser-evidence">
+              <CheckIcon soft />
+              {evidence}
+            </span>
+          ) : null}
+        </div>
+        {fit ? <p className="adviser-feature-fit">{fit}</p> : null}
+        <div className="adviser-feature-split">
+          <div>
+            <h4>Pros</h4>
+            <NoteList items={pros} tone="pro" />
+          </div>
+          <div>
+            <h4>Watch-outs</h4>
+            <NoteList items={cons} tone="watch" />
+          </div>
+        </div>
+        <DetailsButton name={peptide.name} disabled={disabled} onSelect={onSelect} />
+      </div>
+    </article>
+  );
+}
+
+function OptionCard({
+  peptide,
+  disabled,
+  onSelect,
+}: {
+  peptide: RecommendationBoardPeptide;
+  disabled?: boolean;
+  onSelect?: (name: string) => void;
+}) {
+  const summary = (peptide.description || peptide.fit || "").trim();
+  const reasons = peptideReasons(peptide, summary);
+  const fit = reasons[0] || summary;
+  const pros = (peptide.advantages ?? []).filter(Boolean).slice(0, 2);
+  const cons = (peptide.disadvantages ?? []).filter(Boolean).slice(0, 2);
+  const evidence = peptide.evidence?.trim();
+  const clickable = Boolean(onSelect) && !disabled;
+
+  return (
+    <article
+      className={cn("adviser-option", clickable && "adviser-option--clickable")}
+      onClick={clickable ? () => onSelect?.(peptide.name) : undefined}
+    >
+      <div className="adviser-option-top">
+        <RecommendationVial name={peptide.name} size="thumb" />
+        <div className="adviser-option-heading">
+          <span className="adviser-badge">{rankLabel(peptide.rank)}</span>
+          <h3>{peptide.name}</h3>
+          {evidence ? (
+            <span className="adviser-evidence">
+              <CheckIcon soft />
+              {evidence}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      {fit ? (
+        <div className="adviser-option-block">
+          <h4>Why it fits</h4>
+          <p>{fit}</p>
+        </div>
+      ) : null}
+      {pros.length > 0 ? (
+        <div className="adviser-option-block">
+          <h4>Pros</h4>
+          <NoteList items={pros} tone="pro" />
+        </div>
+      ) : null}
+      {cons.length > 0 ? (
+        <div className="adviser-option-block">
+          <h4>Watch-outs</h4>
+          <NoteList items={cons} tone="watch" />
+        </div>
+      ) : null}
+      <DetailsButton name={peptide.name} disabled={disabled} onSelect={onSelect} />
+    </article>
   );
 }
 
@@ -806,7 +965,7 @@ function MessageActionButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="adviser-chat-ai-action flex h-10 w-10 items-center justify-center rounded-full transition-colors active:scale-[0.96]"
+      className="adviser-chat-ai-action inline-flex items-center gap-[3px]"
     >
       {children}
     </button>

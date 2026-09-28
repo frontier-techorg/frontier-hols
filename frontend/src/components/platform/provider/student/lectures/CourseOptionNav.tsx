@@ -39,7 +39,7 @@ const OPTIONS: Array<{
 
 const optionClass = (isActive: boolean) =>
   cn(
-    "font-sans inline-flex min-h-11 w-full min-w-0 items-center justify-center whitespace-nowrap rounded-full px-2 text-sm font-medium tracking-[0.01em] transition sm:min-h-10 sm:w-auto sm:shrink-0 sm:px-4",
+    "lecture-page-action font-sans inline-flex h-10 min-h-10 w-full min-w-0 items-center justify-center whitespace-nowrap rounded-full px-2 text-sm font-medium tracking-[0.01em] transition sm:w-auto sm:shrink-0 sm:px-4",
     isActive
       ? "dashboard-navy-btn text-white"
       : "dashboard-pill-soft text-[color:var(--dash-text)]",

@@ -19,6 +19,6 @@ export const authLinkClass =
   "font-sans text-sm font-semibold tracking-[0.005em] text-primary underline-offset-4 decoration-2 transition hover:underline md:text-base";
 
 export const authIconButtonClass =
-  "absolute inset-y-0 right-0 flex min-w-11 items-center justify-center px-3 text-primary/40 transition hover:text-primary";
+  "absolute inset-y-0 right-0 flex min-w-10 items-center justify-center px-2.5 text-primary/40 transition hover:text-primary";
 
 export const authAlertClass = "text-brand-body text-sm leading-relaxed sm:text-base";

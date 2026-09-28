@@ -161,8 +161,8 @@ class AffiliatePayoutResultData(BaseModel):
 
 
 class AdminPayoutOverviewData(BaseModel):
-    pending: list[AffiliatePayoutItem] = Field(default_factory=list)
     items: list[AffiliatePayoutItem] = Field(default_factory=list)
+    pagination: PaginationMeta
     pending_count: int = 0
     pending_amount: float = 0
     paid_amount: float = 0

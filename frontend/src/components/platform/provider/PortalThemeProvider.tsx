@@ -7,7 +7,7 @@ import {
   setPortalThemeMemory,
 } from "@/components/platform/provider/portal-theme-store";
 
-const PortalThemeContext = createContext<PortalTheme>("dark");
+const PortalThemeContext = createContext<PortalTheme>("light");
 
 export function PortalThemeProvider({
   initialTheme,

@@ -1,42 +1,22 @@
 import {
-  parsePortalTheme,
   PORTAL_THEME_CHANGE_EVENT,
   PORTAL_THEME_KEY,
   type PortalTheme,
 } from "@/components/platform/provider/portal-theme";
 
-/** In-memory theme so soft navigations remount PortalShell without a dark flash. */
-let portalThemeMemory: PortalTheme | null = null;
+/** Portals are light-only — memory kept for soft navigations / existing subscribers. */
+let portalThemeMemory: PortalTheme | null = "light";
 
 export function getPortalThemeMemory() {
   return portalThemeMemory;
 }
 
-export function setPortalThemeMemory(theme: PortalTheme | null) {
-  portalThemeMemory = theme;
+export function setPortalThemeMemory(_theme: PortalTheme | null) {
+  portalThemeMemory = "light";
 }
 
 export function readStoredPortalTheme(): PortalTheme {
-  if (portalThemeMemory) return portalThemeMemory;
-
-  if (typeof document !== "undefined") {
-    const fromHtml = parsePortalTheme(document.documentElement.getAttribute("data-portal-theme"));
-    if (fromHtml) {
-      portalThemeMemory = fromHtml;
-      return fromHtml;
-    }
-  }
-
-  try {
-    const stored = parsePortalTheme(localStorage.getItem(PORTAL_THEME_KEY));
-    if (stored) {
-      portalThemeMemory = stored;
-      return stored;
-    }
-  } catch {
-    // Ignore storage access errors (private mode, etc.).
-  }
-  return "dark";
+  return "light";
 }
 
 export function subscribePortalTheme(onStoreChange: () => void) {
@@ -49,19 +29,20 @@ export function subscribePortalTheme(onStoreChange: () => void) {
 }
 
 export function getPortalThemeSnapshot(): PortalTheme {
-  return readStoredPortalTheme();
+  return "light";
 }
 
-export function writePortalTheme(next: PortalTheme) {
-  portalThemeMemory = next;
+/** Dark mode removed — always persist light. */
+export function writePortalTheme(_next?: PortalTheme) {
+  portalThemeMemory = "light";
   try {
-    localStorage.setItem(PORTAL_THEME_KEY, next);
+    localStorage.setItem(PORTAL_THEME_KEY, "light");
   } catch {
     // Ignore storage write errors.
   }
   try {
-    document.documentElement.setAttribute("data-portal-theme", next);
-    document.cookie = `${PORTAL_THEME_KEY}=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    document.documentElement.setAttribute("data-portal-theme", "light");
+    document.cookie = `${PORTAL_THEME_KEY}=light; path=/; max-age=31536000; SameSite=Lax`;
   } catch {
     // Ignore document write errors.
   }

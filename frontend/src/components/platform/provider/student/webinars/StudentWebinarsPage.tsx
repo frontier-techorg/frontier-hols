@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
-import { DirectoryNativeSelect, DirectorySearchBar, PaginationControls } from "@/components/platform/provider/admin/shared";
+import { DirectorySearchBar, PaginationControls } from "@/components/platform/provider/admin/shared";
+import { ProfileSelect } from "@/components/platform/provider/student/profile/ProfileSelect";
 import { WebinarsPageSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
 import { WebinarListPanel } from "@/components/platform/provider/student/webinars/WebinarListPanel";
 import { WebinarsPageLayout } from "@/components/platform/provider/student/webinars/WebinarsPageLayout";
@@ -86,9 +87,11 @@ export function StudentWebinarsPage() {
           className="mt-0 w-full min-w-0 sm:max-w-[22rem] sm:shrink-0"
         />
         <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto sm:items-center">
-          <DirectoryNativeSelect
+          <ProfileSelect
             id="student-webinar-status-filter"
             label="Filter webinars"
+            hideLabel
+            className="w-full sm:w-[9.75rem]"
             value={statusFilter}
             onChange={(value) =>
               setStatusFilter(value === "open" || value === "booked" ? value : "all")
@@ -99,9 +102,11 @@ export function StudentWebinarsPage() {
               { value: "booked", label: "Booked" },
             ]}
           />
-          <DirectoryNativeSelect
+          <ProfileSelect
             id="student-webinar-sort-filter"
             label="Sort webinars"
+            hideLabel
+            className="w-full sm:w-[9.75rem]"
             value={sort}
             onChange={(value) => setSort(value === "oldest" ? "oldest" : "newest")}
             options={[
@@ -128,8 +133,9 @@ export function StudentWebinarsPage() {
       ) : (
         <>
           <WebinarListPanel webinars={webinars} />
-          {pagination.total > 0 ? (
+          {pagination.total > 0 && (pagination.has_next || pagination.has_previous || pagination.total_pages > 1) ? (
             <PaginationControls
+              appearance="lecture"
               page={pagination.page}
               pageCount={Math.max(1, pagination.total_pages || Math.ceil(pagination.total / PAGE_SIZE))}
               hasNext={pagination.has_next}

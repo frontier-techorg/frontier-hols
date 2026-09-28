@@ -7,7 +7,5 @@ export const adminNav: PortalNavItem[] = [
   { label: "Payout", href: "/admin/payout", icon: portalIcons.payment },
   { label: "Report", href: "/admin/reports", icon: portalIcons.reports },
   { label: "Webinars", href: "/admin/webinars", icon: portalIcons.webinars },
-  { label: "Plans", href: "/admin/plans", icon: portalIcons.plans },
-  { label: "Notifications", href: "/admin/notifications", icon: portalIcons.notifications, badge: "unread" },
   { label: "Settings", href: "/admin/profile", icon: portalIcons.profile },
 ];

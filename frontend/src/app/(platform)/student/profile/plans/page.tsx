@@ -1,10 +1,13 @@
+import { Suspense } from "react";
 import { PortalGate } from "@/components/platform/provider/PortalGate";
 import { StudentSettingsPage } from "@/components/platform/provider/student/profile/StudentSettingsPage";
 
-export default function StudentProfileCardRoute() {
+export default function StudentProfilePlansRoute() {
   return (
     <PortalGate role="student">
-      <StudentSettingsPage section="card" />
+      <Suspense fallback={null}>
+        <StudentSettingsPage section="plan" />
+      </Suspense>
     </PortalGate>
   );
 }

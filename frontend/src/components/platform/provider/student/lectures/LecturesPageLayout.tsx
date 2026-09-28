@@ -28,7 +28,7 @@ function LecturesSearch({
   return (
     <label className={cn("lecture-library-search lecture-library-search--header w-full", className)}>
       <span className="lecture-library-search-icon" aria-hidden>
-        <SidebarSvgIcon name="search" size={18} />
+        <SidebarSvgIcon name="search" size={16} />
       </span>
       <input
         type="search"

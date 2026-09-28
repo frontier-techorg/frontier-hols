@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/integrate/client";
 import type { AffiliatePayoutItem } from "@/lib/integrate/provider/affiliate/payout";
+import type { AdminPaginationMeta } from "@/lib/integrate/provider/admin/users/types";
 
 export type AdminPayoutItem = AffiliatePayoutItem & {
   affiliate_id?: string | null;
@@ -8,8 +9,8 @@ export type AdminPayoutItem = AffiliatePayoutItem & {
 };
 
 export type AdminPayoutOverview = {
-  pending: AdminPayoutItem[];
   items: AdminPayoutItem[];
+  pagination: AdminPaginationMeta;
   pending_count: number;
   pending_amount: number;
   paid_amount: number;
@@ -23,8 +24,18 @@ export type AdminPayoutReviewResult = {
 
 export type AdminPayoutReviewAction = "accept" | "reject";
 
-export function listAdminPayouts(signal?: AbortSignal) {
-  return apiRequest<AdminPayoutOverview>("/api/admin/affiliates/payouts", { auth: true, signal });
+export function listAdminPayouts(
+  params: { page?: number; limit?: number } = {},
+  signal?: AbortSignal,
+) {
+  const search = new URLSearchParams();
+  if (params.page) search.set("page", String(params.page));
+  if (params.limit) search.set("limit", String(params.limit));
+  const query = search.toString();
+  return apiRequest<AdminPayoutOverview>(
+    `/api/admin/affiliates/payouts${query ? `?${query}` : ""}`,
+    { auth: true, signal },
+  );
 }
 
 export function reviewAdminPayout(

@@ -236,6 +236,12 @@ function vialAssetPath(slug: string): string {
   return `/assets/lectures/lecture_vial/${slug}.png`;
 }
 
+/** Lecture product photo for a peptide name, when that file exists. */
+export function lectureVialSrc(title: string): string | null {
+  const slug = resolveVialSlug(title);
+  return slug ? vialAssetPath(slug) : null;
+}
+
 function matchesBookEntry(slug: string, normalizedTitle: string, entry: BookCoverEntry): boolean {
   if (entry.slugs?.some((alias) => slug === alias || slug.startsWith(`${alias}-`))) {
     return true;

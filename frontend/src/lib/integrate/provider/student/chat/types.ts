@@ -75,6 +75,10 @@ export type BoardConfidence = "conservative" | "balanced" | "aggressive";
 export type RecommendationBoardPeptide = {
   rank: number;
   name: string;
+  description?: string;
+  why?: string[];
+  advantages?: string[];
+  disadvantages?: string[];
   evidence?: string;
   fit?: string;
   score?: number | null;
@@ -86,7 +90,6 @@ export type RecommendationBoard = {
   secondary_goal?: string | null;
   confidence: BoardConfidence | string;
   preferred?: string | null;
-  focus_peptides?: string[];
   ranked: RecommendationBoardPeptide[];
   labs: string[];
   stacks: string[];
@@ -98,6 +101,7 @@ export type RecommendationBoard = {
   };
   reply: string;
   chips: string[];
+  suggested_questions?: string[];
   disclaimer?: string;
 };
 
@@ -118,6 +122,12 @@ export type StoredChatMessage = {
   content: string;
   created_at: string;
   kind?: string;
+  suggested_questions?: string[] | null;
+};
+
+export type ChatReply = {
+  answer: string;
+  suggested_questions: string[];
 };
 
 export type ChatMessagesPagination = {

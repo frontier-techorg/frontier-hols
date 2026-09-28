@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <defs>
+    <linearGradient id="wb-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#142644"/>
+      <stop offset="48%" stop-color="#1b3358"/>
+      <stop offset="100%" stop-color="#0f1f36"/>
+    </linearGradient>
+    <radialGradient id="wb-glow-a" cx="18%" cy="20%" r="45%">
+      <stop offset="0%" stop-color="#dde466" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#dde466" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="wb-glow-b" cx="88%" cy="82%" r="42%">
+      <stop offset="0%" stop-color="#8dc3e1" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#8dc3e1" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#wb-bg)"/>
+  <rect width="640" height="360" fill="url(#wb-glow-a)"/>
+  <rect width="640" height="360" fill="url(#wb-glow-b)"/>
+  <circle cx="520" cy="78" r="64" stroke="#dde466" stroke-opacity="0.35" stroke-width="1.5"/>
+  <circle cx="520" cy="78" r="38" stroke="#8dc3e1" stroke-opacity="0.4" stroke-width="1.2"/>
+  <rect x="214" y="108" width="212" height="128" rx="18" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.22" stroke-width="1.5"/>
+  <path d="M300 148v48l42-24-42-24z" fill="#dde466"/>
+  <rect x="48" y="286" width="112" height="8" rx="4" fill="#8dc3e1" fill-opacity="0.4"/>
+  <rect x="48" y="304" width="168" height="6" rx="3" fill="#ffffff" fill-opacity="0.14"/>
+  <text x="48" y="48" fill="#ffffff" fill-opacity="0.55" font-family="system-ui,sans-serif" font-size="14" font-weight="600" letter-spacing="3">WEBINAR</text>
+</svg>

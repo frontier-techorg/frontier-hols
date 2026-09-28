@@ -14,6 +14,7 @@ from fastapi import HTTPException, status
 
 from core.async_io import run_sync
 from database import get_table
+from services.common.pagination import build_pagination
 from database_entities import (
     DEFAULT_PAYOUT_LOCK_DAYS,
     AffiliateCommissionLedger,
@@ -760,26 +761,47 @@ async def request_payout(*, affiliate_id: str, amount: Optional[float] = None) -
     }
 
 
-async def list_admin_payouts(*, history_limit: int = 80) -> dict[str, Any]:
-    pending_items = await _query_pk(AffiliatePayout.pending_pk())
-    history_items = await _query_pk(AffiliatePayout.all_pk(), limit=history_limit)
-    pending = [public_payout(item) for item in pending_items]
-    items = [public_payout(item) for item in history_items]
-    pending.sort(key=lambda row: row.get("created_at") or "", reverse=True)
-    currency = "USD"
-    if pending:
-        currency = pending[0]["currency"]
-    elif items:
-        currency = items[0]["currency"]
-    rejected_count = sum(1 for row in items if row["status"] == AffiliatePayoutStatus.REJECTED.value)
+async def list_admin_payouts(*, page: int = 1, limit: int = 15) -> dict[str, Any]:
+    if page < 1:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "page must be >= 1")
+    if limit < 1 or limit > 100:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "limit must be between 1 and 100")
+
+    raw_items = await _query_pk(AffiliatePayout.all_pk())
+    seen: set[str] = set()
+    rows: list[dict[str, Any]] = []
+    for item in raw_items:
+        public = public_payout(item)
+        payout_id = str(public.get("payout_id") or "")
+        if not payout_id or payout_id in seen:
+            continue
+        seen.add(payout_id)
+        rows.append(public)
+
+    pending_status = AffiliatePayoutStatus.PENDING.value
+    rows.sort(key=lambda row: row.get("created_at") or "", reverse=True)
+    rows.sort(key=lambda row: 0 if row.get("status") == pending_status else 1)
+
+    total = len(rows)
+    start_index = (page - 1) * limit
+    page_rows = rows[start_index : start_index + limit]
+    rejected_count = sum(
+        1 for row in rows if row.get("status") == AffiliatePayoutStatus.REJECTED.value
+    )
+    pending_count = sum(1 for row in rows if row.get("status") == pending_status)
     from services.routes.finance.service import get_admin_finance
 
     finance = await get_admin_finance()
-    currency = finance.get("currency") or currency
+    currency = finance.get("currency") or (page_rows[0]["currency"] if page_rows else "USD")
     return {
-        "pending": pending,
-        "items": items,
-        "pending_count": len(pending),
+        "items": page_rows,
+        "pagination": build_pagination(
+            page=page,
+            limit=limit,
+            total=total,
+            has_next=start_index + limit < total,
+        ),
+        "pending_count": pending_count,
         "pending_amount": finance["affiliate_pending"],
         "paid_amount": finance["affiliate_paid_out"],
         "rejected_count": rejected_count,

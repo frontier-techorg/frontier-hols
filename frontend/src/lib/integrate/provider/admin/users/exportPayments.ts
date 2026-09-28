@@ -15,6 +15,7 @@ import {
   type ExcelCell,
 } from "@/lib/export/excelCsv";
 import {
+  orderItemLabel,
   planLabels,
   type Order,
   type PlanType,
@@ -186,7 +187,7 @@ export async function exportStudentOrdersExcel(userId: string, studentLabel?: st
   const rows: ExcelCell[][] = orders.map((order) => [
     order.order_id,
     userId,
-    planLabel(order.plan_type),
+    orderItemLabel(order),
     order.amount,
     order.currency,
     order.status,

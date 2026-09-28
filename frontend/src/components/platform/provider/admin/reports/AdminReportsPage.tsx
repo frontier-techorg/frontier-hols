@@ -252,7 +252,7 @@ export function AdminReportsPage() {
       brandBackdrop
       nav={adminNav}
     >
-      <div className="dashboard-screen lectures-page min-w-0 overflow-x-hidden">
+      <div className="dashboard-screen lectures-page orders-page min-w-0 overflow-x-hidden">
         <header className="mb-4 flex min-h-10 min-w-0 items-center gap-2 sm:mb-5 sm:min-h-12 sm:gap-3 md:gap-4">
           <button
             type="button"
@@ -296,7 +296,7 @@ export function AdminReportsPage() {
               type="button"
               disabled={downloading || invalidRange}
               onClick={() => void handleDownload()}
-              className="dashboard-navy-btn font-sans inline-flex h-11 min-h-11 w-full items-center justify-center rounded-full px-4 text-sm font-medium tracking-[0.01em] text-white disabled:pointer-events-none disabled:opacity-50 sm:ml-auto sm:h-10 sm:min-h-10 sm:w-auto"
+              className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 w-full items-center justify-center rounded-full px-4 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50 sm:ml-auto sm:w-auto"
             >
               {downloading ? "Downloading…" : "Download report"}
             </button>
@@ -317,7 +317,7 @@ export function AdminReportsPage() {
                   <button
                     type="button"
                     onClick={cancelDownload}
-                    className="dashboard-pill-soft font-sans inline-flex min-h-9 items-center justify-center rounded-full px-3.5 text-sm font-medium"
+                    className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium"
                   >
                     Cancel
                   </button>
@@ -386,6 +386,7 @@ export function AdminReportsPage() {
                           label: "Commission",
                           value: formatMoney(item.affiliate_commission ?? 0, item.currency || currency),
                         },
+                        { label: "Action", value: <span className="portal-action-link">View</span> },
                       ]}
                     />
                   </li>
@@ -410,14 +411,14 @@ export function AdminReportsPage() {
                       <th scope="col" className="px-3 py-3 font-semibold">
                         Affiliate
                       </th>
-                      <th scope="col" className="px-3 py-3 text-right font-semibold">
+                      <th scope="col" className="px-3 py-3 font-semibold">
                         Amount
                       </th>
-                      <th scope="col" className="px-3 py-3 text-right font-semibold">
+                      <th scope="col" className="px-3 py-3 font-semibold">
                         Commission
                       </th>
-                      <th scope="col" className="px-4 py-3 text-right font-semibold sm:px-5">
-                        <span className="sr-only">Open</span>
+                      <th scope="col" className="px-4 py-3 font-semibold sm:px-5">
+                        Action
                       </th>
                     </tr>
                   </thead>
@@ -431,7 +432,7 @@ export function AdminReportsPage() {
                           role="button"
                           aria-label={`Open order ${item.order_id}`}
                           className={cn(
-                            "cursor-pointer outline-none transition focus-visible:bg-[color:var(--dash-soft)]",
+                            "orders-table-row cursor-pointer outline-none transition focus-visible:bg-[color:var(--dash-soft)]",
                             active ? "bg-[color:var(--dash-soft)]" : "hover:bg-[color:var(--dash-soft)]",
                           )}
                           onClick={() => setSelectedId(item.order_id)}
@@ -461,30 +462,27 @@ export function AdminReportsPage() {
                             </span>
                           </td>
                           <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
-                            <StatusBadge tone={statusTone(item.status)}>
+                            <span className="text-brand-caption inline-flex rounded-full bg-[color:var(--dash-soft)] px-2.5 py-1 font-semibold text-[color:var(--dash-text)]">
                               {statusLabel(item.status)}
-                            </StatusBadge>
+                            </span>
                           </td>
                           <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
                             <span className="font-sans block max-w-[11rem] truncate text-sm font-medium text-[color:var(--dash-text)]">
                               {personLabel(item.affiliate_name, item.affiliate_email, "Direct")}
                             </span>
                           </td>
-                          <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3 text-right">
-                            <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                          <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                            <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
                               {formatMoney(item.amount, item.currency || currency)}
                             </span>
                           </td>
-                          <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3 text-right">
-                            <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-text)]">
+                          <td className="border-t border-[color:var(--dash-surface-border)] px-3 py-3">
+                            <span className="font-sans text-sm font-semibold tabular-nums text-[color:var(--dash-amount)]">
                               {formatMoney(item.affiliate_commission ?? 0, item.currency || currency)}
                             </span>
                           </td>
-                          <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 text-right sm:px-5">
-                            <span className="inline-flex items-center justify-end gap-1 text-brand-caption font-medium text-[color:var(--dash-accent)]">
-                              View
-                              <SidebarSvgIcon name="next" size={14} />
-                            </span>
+                          <td className="border-t border-[color:var(--dash-surface-border)] px-4 py-3 sm:px-5">
+                            <span className="portal-action-link">View</span>
                           </td>
                         </tr>
                       );
@@ -495,10 +493,12 @@ export function AdminReportsPage() {
               </>
             )}
 
-            {report && report.pagination.total > 0 ? (
+            {report && (report.pagination.has_next || report.pagination.has_previous || page > 1) ? (
               <div className="px-4 pb-4 sm:px-5">
                 <PaginationControls
+                  appearance="lecture"
                   page={report.pagination.page}
+                  pageCount={Math.max(1, Math.ceil(report.pagination.total / PAGE_SIZE))}
                   hasNext={report.pagination.has_next}
                   hasPrevious={report.pagination.has_previous}
                   total={report.pagination.total}
@@ -608,7 +608,7 @@ function ReportDateField({
   return (
     <label className="grid min-w-0 gap-1.5">
       <span className="dashboard-field-label px-1">{label}</span>
-      <span className="hols-hover-border report-date-field relative inline-flex h-11 min-h-11 w-full min-w-0 items-center rounded-full border border-[color:var(--dash-surface-border)] bg-[color:var(--dash-soft)]/55 px-3.5 sm:h-10 sm:min-h-10 sm:w-[13.75rem] sm:shrink-0">
+      <span className="hols-hover-border report-date-field relative inline-flex h-10 w-full min-w-0 items-center border border-[color:var(--dash-surface-border)] px-3.5 sm:w-[13.75rem] sm:shrink-0">
         <input
           id={id}
           type="date"

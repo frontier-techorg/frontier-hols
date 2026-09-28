@@ -80,12 +80,6 @@ def parse_http_exception_detail(detail: Any, status_code: int) -> tuple[str, str
 
     if isinstance(detail, list):
         field_labels = {
-            "card_number": "Card number",
-            "exp_month": "Expiry month",
-            "exp_year": "Expiry year",
-            "cvc": "CVC",
-            "pin": "PIN",
-            "card_holder_name": "Cardholder name",
             "join_url": "Join URL",
             "capacity": "Capacity",
             "starts_at": "Start time",

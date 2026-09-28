@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
+import { Button } from "@/components/ui/Button";
 
 type CreatePatientDialogProps = {
   open: boolean;
@@ -55,7 +56,7 @@ export function CreatePatientDialog({
   const canSubmit = Boolean(name.trim()) && !isSubmitting;
 
   return createPortal(
-    <div className="adviser-dialog-overlay adviser-dialog-overlay--center fixed inset-0 z-[80] flex min-h-dvh items-center justify-center bg-black/45 px-[max(0.75rem,env(safe-area-inset-left))] py-[max(1rem,env(safe-area-inset-top),env(safe-area-inset-bottom))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-4 sm:py-6">
+    <div className="adviser-dialog-overlay adviser-dialog-overlay--center fixed inset-0 z-[80] flex min-h-dvh items-end justify-center overflow-y-auto bg-black/45 px-[max(0.75rem,env(safe-area-inset-left))] py-[max(0.75rem,env(safe-area-inset-top),env(safe-area-inset-bottom))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:items-center sm:px-4 sm:py-6">
       <button
         type="button"
         aria-label="Close create patient dialog"
@@ -69,7 +70,7 @@ export function CreatePatientDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="adviser-dialog-panel adviser-dialog-panel--center relative z-10 flex max-h-[min(88svh,40rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-2xl"
+        className="adviser-dialog-panel adviser-dialog-panel--center @container relative z-10 my-auto flex max-h-[calc(100dvh-1.5rem)] w-full min-w-0 max-w-md flex-col overflow-hidden rounded-2xl"
         onSubmit={(event) => {
           event.preventDefault();
           const trimmed = name.trim();
@@ -77,35 +78,26 @@ export function CreatePatientDialog({
           onSubmit(trimmed);
         }}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[color:var(--dash-surface-border)] px-4 py-3.5 sm:gap-4 sm:px-5 sm:py-4 md:px-6">
-          <div className="min-w-0">
-            <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
-              Peptide Advisor
-            </p>
-            <h2
-              id={titleId}
-              className="font-sans mt-1 text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl"
-            >
-              New patient
-            </h2>
-            <p className="text-brand-body mt-1 text-pretty text-sm text-[color:var(--dash-muted)] sm:text-base">
-              Enter a case name to start structured intake.
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3">
+          <h2
+            id={titleId}
+            className="font-sans min-w-0 text-lg font-bold tracking-[0.01em] text-[color:var(--dash-text)] sm:text-xl"
+          >
+            New patient
+          </h2>
           <button
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
-            className="adviser-onboarding-close inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:h-12 sm:w-12"
+            className="adviser-onboarding-close inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50"
             aria-label="Close dialog"
           >
-            <SidebarSvgIcon name="cross" size={24} strokeWidth={2.2} className="sm:hidden" />
-            <SidebarSvgIcon name="cross" size={28} strokeWidth={2.15} className="hidden sm:block" />
+            <SidebarSvgIcon name="cross" size={24} strokeWidth={2.25} />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5 md:px-6">
-          <label className="grid min-w-0 gap-2">
+        <div className="space-y-3 px-5 pb-4">
+          <label className="grid min-w-0 gap-1.5">
             <span className="dashboard-field-label">Patient name</span>
             <input
               ref={inputRef}
@@ -118,39 +110,30 @@ export function CreatePatientDialog({
               enterKeyHint="done"
               autoComplete="off"
               onChange={(event) => setName(event.target.value)}
-              className="dashboard-field adviser-field"
+              className="dashboard-field adviser-field h-10 min-h-10 text-sm"
             />
           </label>
 
           {error ? <AuthAlert variant="error">{error}</AuthAlert> : null}
         </div>
 
-        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[color:var(--dash-surface-border)] px-4 py-3.5 sm:flex-row sm:justify-end sm:gap-2.5 sm:px-5 sm:py-4 md:px-6">
+        <div className="flex flex-col-reverse gap-2 px-5 pb-5 @min-[22rem]:flex-row @min-[22rem]:justify-end @min-[22rem]:gap-2.5">
           <button
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
-            className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="dashboard-navy-btn lecture-page-action font-sans inline-flex h-10 min-h-10 w-full items-center justify-center rounded-full px-5 text-sm font-semibold text-white disabled:pointer-events-none disabled:opacity-50 @min-[22rem]:w-auto"
           >
             Cancel
           </button>
-          <button
+          <Button
             type="submit"
+            size="sm"
             disabled={!canSubmit}
-            className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-white disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action h-10 min-h-10 w-full overflow-hidden px-5 text-sm @min-[22rem]:w-auto"
           >
-            {isSubmitting ? (
-              <>
-                <SidebarSvgIcon name="spinner" size={16} strokeWidth={2.5} className="animate-spin" />
-                Creating…
-              </>
-            ) : (
-              <>
-                <SidebarSvgIcon name="plus" size={15} strokeWidth={2.2} />
-                Create patient
-              </>
-            )}
-          </button>
+            {isSubmitting ? "Creating…" : "Create patient"}
+          </Button>
         </div>
       </form>
     </div>,

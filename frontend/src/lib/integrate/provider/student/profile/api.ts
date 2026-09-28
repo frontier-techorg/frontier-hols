@@ -54,17 +54,44 @@ export function getCachedStudentProfile() {
 export function getStudentProfile(signal?: AbortSignal) {
   const cached = getCachedStudentProfile();
   if (cached) return Promise.resolve(cached);
-  if (pendingProfileRequest) return pendingProfileRequest;
 
-  pendingProfileRequest = apiRequest<ProfileData>("/api/auth/profile", { auth: true, signal })
-    .then((data) => {
-      writeProfileCache(data);
-      return data;
-    })
-    .finally(() => {
-      pendingProfileRequest = null;
-    });
-  return pendingProfileRequest;
+  if (!pendingProfileRequest) {
+    pendingProfileRequest = apiRequest<ProfileData>("/api/auth/profile", { auth: true })
+      .then((data) => {
+        writeProfileCache(data);
+        return data;
+      })
+      .finally(() => {
+        pendingProfileRequest = null;
+      });
+  }
+
+  const request = pendingProfileRequest;
+  if (!signal) return request;
+
+  return new Promise<ProfileData>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+
+    const onAbort = () => {
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+
+    request.then(
+      (data) => {
+        signal.removeEventListener("abort", onAbort);
+        if (signal.aborted) onAbort();
+        else resolve(data);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      },
+    );
+  });
 }
 
 export function updateStudentProfile(

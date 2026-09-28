@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 from typing import Any, List, Optional
@@ -20,7 +21,6 @@ from services.routes.chat.questionnaire import (
     build_rag_query,
     build_recommendation_board,
     evaluate_intake,
-    format_board_receipt,
     get_flow_definition,
 )
 
@@ -45,17 +45,28 @@ RULES:
 
 FOLLOWUP_SYSTEM = """You are Frontier BioMed's Peptide Adviser in a live chat after the Recommendation Card.
 
-Reply like a fast clinical SMS to the provider:
-- Max 80 words (aim 40–60)
-- 1–4 short bullets OR 2 short sentences — never both walls of text
-- Bold peptide names only; no ### headers
-- Stay on this patient case
-- If FOCUS PEPTIDES lists one peptide, answer only about that peptide.
-- If FOCUS PEPTIDES lists several and the question is general or a comparison, cover each named peptide. Do not drop any selected name and do not swap in unselected shortlist peptides.
-- If FOCUS PEPTIDES lists several but the question names one of them, answer about that named peptide only. Do not introduce unselected shortlist peptides.
-- Never prescribe doses / start therapy
+The BOARD is the whole case. Apply its ranking technique and each peptide's mechanism, why it fits, advantages, and watch-outs across the full shortlist. Do not narrow the answer to one peptide unless the provider names one.
+
+Return JSON only, with no markdown fence:
+{"answer":"...","suggested_questions":["...","..."]}
+
+answer:
+- Concise markdown that answers only the latest message
+- Greeting (hi, hello, how are you): 1–2 sentences that return the greeting. Do not discuss peptides
+- Farewell (bye, thanks, that's all): a short goodbye. Do not discuss peptides
+- If they ask for a table, list, comparison, or another format, use that markdown form
+- Clinical questions: answer that question from the board. Bold peptide names as **Name**. Max ~80 words
+- If the message names one peptide or asks for its details, answer only that peptide: why it fits this case, how it works, advantages, and watch-outs. Do not review the other peptides
+- Off-topic questions: one relevant sentence, then offer to return to the case
+- Never prescribe doses or tell the provider to start therapy
 - Never suggest blocked peptides
-- Skip greetings, disclaimers, and restating the whole card unless asked
+
+suggested_questions:
+- Exactly 2 or 3 questions that continue the latest message
+- Each question is 3 to 6 words and ends with ?
+- After a greeting, suggest greeting-style questions
+- After a farewell, suggest closing questions
+- After a clinical question, suggest the next questions on that same topic
 """
 
 _state: dict = {}
@@ -164,27 +175,19 @@ def recommend_questionnaire(req: IntakeRequest) -> dict:
     }
 
 
-def _normalize_focus_peptides(names: Optional[List[str]]) -> list[str]:
-    seen: set[str] = set()
-    cleaned: list[str] = []
-    for raw in names or []:
-        name = str(raw or "").strip()
-        if not name or name in seen:
-            continue
-        seen.add(name)
-        cleaned.append(name)
-        if len(cleaned) >= 8:
-            break
-    return cleaned
-
-
-def followup_questionnaire(req: FollowUpRequest) -> dict:
+def followup_questionnaire(req: FollowUpRequest, *, board: Optional[dict] = None) -> dict:
     ensure_initialized()
     question = req.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Empty question.")
 
-    focus_peptides = _normalize_focus_peptides(req.focus_peptides)
+    social = _social_reply(question)
+    if social:
+        return {
+            "answer": social["answer"],
+            "sources": [],
+            "suggested_questions": social["suggested_questions"],
+        }
 
     # Skip RAG for ultra-short meta questions — evaluation context is enough.
     needs_rag = _question_needs_rag(question)
@@ -194,7 +197,7 @@ def followup_questionnaire(req: FollowUpRequest) -> dict:
         k = min(req.top_k or settings.top_k, settings.top_k)
         rag_q = f"{question}. Patient goal: {req.evaluation.get('primary_goal', '')}. "
         recs = req.evaluation.get("recommendations") or []
-        peptide_names = focus_peptides or [p.get("name", "") for p in recs[:4] if p.get("name")]
+        peptide_names = [p.get("name", "") for p in recs[:4] if p.get("name")]
         if peptide_names:
             rag_q += "Peptides: " + ", ".join(peptide_names)
         context, sources = _retrieve(rag_q, k)
@@ -202,21 +205,30 @@ def followup_questionnaire(req: FollowUpRequest) -> dict:
             context = "(No additional KB context.)"
 
     try:
-        answer = _generate_followup(
+        raw = _generate_followup(
             req.answers,
             req.evaluation,
             req.recommendation,
             req.messages,
             question,
             context,
-            focus_peptides=focus_peptides,
+            board=board,
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"LLM error: {exc}") from exc
 
+    answer, questions = _parse_followup_payload(raw)
+    if len(questions) < 2:
+        for fallback in _fallback_questions(board):
+            if fallback not in questions:
+                questions.append(fallback)
+            if len(questions) >= 3:
+                break
+
     return {
         "answer": answer,
         "sources": [source.model_dump() for source in sources],
+        "suggested_questions": questions[:3],
     }
 
 
@@ -261,82 +273,17 @@ async def recommend_for_patient(
     )
 
 
-async def update_board_for_patient(
-    *,
-    user_id: str,
-    patient_id: str,
-    confidence: Optional[str] = None,
-    preferred: Optional[str] = None,
-    clear_preferred: bool = False,
-    focus_peptides: Optional[List[str]] = None,
-) -> dict:
-    """Rebuild War Room board from stored evaluation (deterministic, no LLM)."""
-    from services.routes.chat import patient_service
-
-    patient_entity, _chat = await patient_service.get_patient_for_chat(user_id, patient_id)
-    evaluation = patient_entity.evaluation
-    if not evaluation:
-        raise HTTPException(status_code=400, detail="Generate a recommendation before updating the board.")
-
-    current = patient_entity.recommendation_board or {}
-    next_confidence = confidence or current.get("confidence") or "balanced"
-    next_preferred: Optional[str]
-    if clear_preferred:
-        next_preferred = None
-    elif preferred is not None and preferred.strip():
-        next_preferred = preferred.strip()
-    else:
-        next_preferred = current.get("preferred")
-
-    next_focus = (
-        focus_peptides if focus_peptides is not None else current.get("focus_peptides")
-    )
-
-    board = build_recommendation_board(
-        evaluation,
-        confidence=str(next_confidence),
-        preferred=next_preferred,
-        focus_peptides=next_focus,
-    )
-
-    changes: list[dict] = []
-    prev_confidence = current.get("confidence") or "balanced"
-    if str(prev_confidence) != board["confidence"]:
-        changes.append(
-            {
-                "field": "Confidence",
-                "from": prev_confidence,
-                "to": board["confidence"],
-            }
-        )
-    prev_preferred = current.get("preferred")
-    if prev_preferred != board.get("preferred"):
-        changes.append(
-            {
-                "field": "Preferred peptide",
-                "from": prev_preferred or "none",
-                "to": board.get("preferred") or "none",
-            }
-        )
-
-    receipt = format_board_receipt(board, changes=changes) if changes else None
-    return await patient_service.save_patient_board(
-        user_id=user_id,
-        patient_id=patient_id,
-        recommendation_board=board,
-        receipt=receipt,
-    )
-
-
 async def send_message_for_patient(
     *,
     user_id: str,
     patient_id: str,
-    question: str,
-    top_k: Optional[int] = None,
-    focus_peptides: Optional[List[str]] = None,
+    query: str,
 ) -> dict:
     from services.routes.chat import patient_service
+
+    question = query.strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Empty question.")
 
     started = time.perf_counter()
     patient_entity, chat_entity = await patient_service.get_patient_for_chat(user_id, patient_id)
@@ -354,30 +301,14 @@ async def send_message_for_patient(
             detail=f"This consultation has reached the {settings.chat_max_turns}-turn limit.",
         )
 
-    allowed_names = {
-        str(item.get("name") or "").strip()
-        for item in (patient_entity.recommendation_board or {}).get("ranked") or []
-        if item.get("name")
-    }
-    if not allowed_names:
-        allowed_names = {
-            str(item.get("name") or "").strip()
-            for item in (patient_entity.evaluation or {}).get("recommendations") or []
-            if item.get("name")
-        }
-    current_board = patient_entity.recommendation_board or {}
-    requested_focus = _normalize_focus_peptides(focus_peptides)
-    if not requested_focus:
-        requested_focus = _normalize_focus_peptides(current_board.get("focus_peptides"))
-    scoped_focus = [name for name in requested_focus if name in allowed_names]
-    if not scoped_focus:
-        preferred = str(current_board.get("preferred") or "").strip()
-        if preferred and preferred in allowed_names:
-            scoped_focus = [preferred]
-        else:
-            scoped_focus = [next(iter(allowed_names))] if allowed_names else []
+    board = patient_entity.recommendation_board or {}
+    if patient_entity.evaluation and not board.get("ranked"):
+        board = build_recommendation_board(patient_entity.evaluation)
 
-    is_first_chat = not chat_entity.messages
+    is_first_chat = not any(
+        message.get("role") == "user" and message.get("kind", "message") == "message"
+        for message in chat_entity.messages
+    )
 
     history, memory_stats = trim_chat_history(chat_entity.messages)
     logger.info(
@@ -393,42 +324,31 @@ async def send_message_for_patient(
         recommendation=patient_entity.recommendation,
         messages=history,
         question=question,
-        top_k=top_k,
-        focus_peptides=scoped_focus,
     )
 
     # Generate first, then persist user+assistant in one Dynamo write (lower latency).
     llm_started = time.perf_counter()
-    result = followup_questionnaire(req)
+    result = followup_questionnaire(req, board=board)
     logger.info(
         "Follow-up LLM completed for patient %s in %.0fms",
         patient_id,
         (time.perf_counter() - llm_started) * 1000,
     )
 
-    next_board = None
-    if patient_entity.evaluation:
-        next_board = build_recommendation_board(
-            patient_entity.evaluation,
-            confidence=str(current_board.get("confidence") or "balanced"),
-            preferred=current_board.get("preferred"),
-            focus_peptides=scoped_focus,
-        )
-
     await patient_service.append_patient_messages(
         user_id=user_id,
         patient_id=patient_id,
         entries=[
             {"role": "user", "content": question, "kind": "message"},
-            {"role": "assistant", "content": result["answer"], "kind": "message"},
+            {
+                "role": "assistant",
+                "content": result["answer"],
+                "kind": "message",
+                "suggested_questions": result["suggested_questions"],
+            },
         ],
-        recommendation_board=next_board,
     )
 
-    response = await patient_service.build_patient_messages_response(
-        user_id=user_id,
-        patient_id=patient_id,
-    )
     logger.info(
         "Follow-up saved for patient %s user %s total=%.0fms",
         patient_id,
@@ -445,10 +365,116 @@ async def send_message_for_patient(
             )
         except Exception:
             logger.exception("Failed to queue chat notification user=%s patient=%s", user_id, patient_id)
-    return response
+    return {
+        "answer": result["answer"],
+        "suggested_questions": result["suggested_questions"],
+    }
+
+
+_GREETING_PHRASES = (
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "how are you doing",
+    "how are you",
+    "hows it going",
+    "how do you do",
+    "whats up",
+    "hello there",
+    "hey there",
+    "hi there",
+    "hello",
+    "hiya",
+    "howdy",
+    "hey",
+    "hi",
+)
+
+_FAREWELL_PHRASES = (
+    "thank you bye",
+    "thanks bye",
+    "good night",
+    "good bye",
+    "see you",
+    "see ya",
+    "thank you",
+    "thats all",
+    "im done",
+    "all done",
+    "goodbye",
+    "thanks",
+    "bye",
+    "cya",
+)
+
+
+def _normalize_social(text: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9'\s]", " ", (text or "").lower())
+    return " ".join(cleaned.replace("'", "").split())
+
+
+def _phrase_covers(text: str, phrases: tuple[str, ...]) -> bool:
+    remaining = text
+    ordered = tuple(sorted(phrases, key=len, reverse=True))
+    while remaining:
+        match = next(
+            (phrase for phrase in ordered if remaining == phrase or remaining.startswith(f"{phrase} ")),
+            None,
+        )
+        if not match:
+            return False
+        remaining = remaining[len(match) :].strip()
+    return True
+
+
+def _social_kind(question: str) -> Optional[str]:
+    text = _normalize_social(question)
+    if not text or len(text.split()) > 8:
+        return None
+    farewell = _phrase_covers(text, _FAREWELL_PHRASES)
+    greeting = _phrase_covers(text, _GREETING_PHRASES)
+    if farewell and not greeting:
+        return "farewell"
+    if greeting and not farewell:
+        return "greeting"
+    return None
+
+
+def _social_reply(question: str) -> Optional[dict]:
+    kind = _social_kind(question)
+    if kind == "greeting":
+        if "how are you" in _normalize_social(question):
+            return {
+                "answer": "I'm doing well, thanks. What would you like to cover?",
+                "suggested_questions": [
+                    "What can you help with?",
+                    "Show the shortlist?",
+                    "How does this work?",
+                ],
+            }
+        return {
+            "answer": "Hi. I'm here for this consultation — what would you like to look at?",
+            "suggested_questions": [
+                "How are you?",
+                "What can you help with?",
+                "Show the shortlist?",
+            ],
+        }
+    if kind == "farewell":
+        return {
+            "answer": "Goodbye. I'm here if you want to pick this case back up.",
+            "suggested_questions": [
+                "One last question?",
+                "Summarize this case?",
+                "See you later?",
+            ],
+        }
+    return None
 
 
 def _question_needs_rag(question: str) -> bool:
+    if _social_kind(question):
+        return False
     q = question.lower()
     # Ranking / board questions are answered from evaluation alone.
     if any(token in q for token in ("why is", "why #", "rank #", "shortlist", "top peptide", "clinical note")):
@@ -456,6 +482,8 @@ def _question_needs_rag(question: str) -> bool:
     keywords = (
         "mechanism",
         "side effect",
+        "detail",
+        "explain",
         "storage",
         "handling",
         "evidence",
@@ -605,6 +633,136 @@ def _generate_intake_recommendation(answers: dict, evaluation: dict, context: st
     )
 
 
+def _followup_turn(question: str, board: Optional[dict]) -> str:
+    focus = _focus_peptide(question, board)
+    if focus:
+        name = str(focus.get("name") or "").strip()
+        detail = {
+            "name": name,
+            "mechanism": focus.get("description") or focus.get("fit"),
+            "why": (focus.get("why") or [])[:4],
+            "advantages": (focus.get("advantages") or [])[:3],
+            "watch_outs": (focus.get("disadvantages") or [])[:3],
+            "evidence": focus.get("evidence"),
+        }
+        return (
+            f"{question}\n\n"
+            f"The provider asked for details of {name} only. Use this peptide from the board:\n"
+            f"{json.dumps(detail, separators=(',', ':'))}\n"
+            f"Answer in concise markdown about {name} alone: why it fits this case, how it works, "
+            "advantages, and watch-outs. Do not review the other shortlist peptides. "
+            f"Bold **{name}**. Suggested questions must stay on {name}. "
+            "Return JSON with the answer and 2 or 3 questions of 6 words or fewer."
+        )
+    return (
+        f"{question}\n\n"
+        "Reply only to this message, in concise markdown that matches the request. "
+        "Use a markdown table if they asked for a table, and bullets if they asked for a list. "
+        "Bold peptide names as **Name** when you mention them. "
+        "Suggested questions must continue this same topic. "
+        "Return JSON with the answer and 2 or 3 questions of 6 words or fewer."
+    )
+
+
+def _focus_peptide(question: str, board: Optional[dict]) -> Optional[dict]:
+    """Return the one shortlist peptide named in the question, if exactly one matches."""
+    if not board:
+        return None
+    text = (question or "").lower()
+    matches: list[dict] = []
+    ranked = [item for item in (board.get("ranked") or []) if item.get("name")]
+    for item in sorted(ranked, key=lambda peptide: len(str(peptide.get("name") or "")), reverse=True):
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        if re.search(rf"(?<![a-z0-9]){re.escape(name.lower())}(?![a-z0-9])", text):
+            matches.append(item)
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def _board_context(board: Optional[dict]) -> str:
+    if not board:
+        return "(none)"
+    ranked = []
+    for item in (board.get("ranked") or [])[:4]:
+        ranked.append(
+            {
+                "name": item.get("name"),
+                "mechanism": item.get("description") or item.get("fit"),
+                "why": (item.get("why") or [])[:3],
+                "advantages": (item.get("advantages") or [])[:2],
+                "watch_outs": (item.get("disadvantages") or [])[:2],
+                "evidence": item.get("evidence"),
+            }
+        )
+    payload = {
+        "goal": board.get("primary_goal"),
+        "secondary_goal": board.get("secondary_goal"),
+        "confidence": board.get("confidence") or "balanced",
+        "shortlist": ranked,
+        "labs": (board.get("labs") or [])[:6],
+        "stacks": board.get("stacks") or [],
+        "safety": board.get("safety") or {},
+    }
+    return json.dumps(payload, separators=(",", ":"))
+
+
+def _fallback_questions(board: Optional[dict]) -> list[str]:
+    if not board:
+        return []
+    questions = list(board.get("suggested_questions") or board.get("chips") or [])
+    cleaned: list[str] = []
+    for question in questions:
+        text = str(question or "").strip()
+        if text and text not in cleaned:
+            cleaned.append(text)
+        if len(cleaned) >= 3:
+            break
+    return cleaned
+
+
+def _short_question(question: str) -> str:
+    words = [word for word in question.replace("?", " ").split() if word]
+    if not words:
+        return ""
+    return f"{' '.join(words[:6])}?"
+
+
+def _parse_followup_payload(raw: str) -> tuple[str, list[str]]:
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = text.removeprefix("```json").removeprefix("```").strip()
+        if text.endswith("```"):
+            text = text[: -3].strip()
+
+    data: Any = None
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                data = json.loads(text[start : end + 1])
+            except json.JSONDecodeError:
+                data = None
+
+    if not isinstance(data, dict):
+        return text, []
+
+    answer = str(data.get("answer") or "").strip()
+    questions: list[str] = []
+    for item in data.get("suggested_questions") or []:
+        question = _short_question(str(item or "").strip())
+        if question and question not in questions:
+            questions.append(question)
+        if len(questions) == 3:
+            break
+    return answer or text, questions
+
+
 def _generate_followup(
     answers: dict,
     evaluation: dict,
@@ -612,18 +770,12 @@ def _generate_followup(
     history: List[ChatMessage],
     question: str,
     context: str,
-    focus_peptides: Optional[List[str]] = None,
+    board: Optional[dict] = None,
 ) -> str:
-    focus = _normalize_focus_peptides(focus_peptides)
-    focus_line = (
-        f"FOCUS PEPTIDES: {', '.join(focus)}. Answer only about these unless asked otherwise.\n"
-        if focus
-        else ""
-    )
     case_block = (
-        f"{focus_line}"
         f"INTAKE:{json.dumps(_compact_answers(answers), separators=(',', ':'))}\n"
         f"EVAL:{json.dumps(_compact_evaluation(evaluation), separators=(',', ':'))}\n"
+        f"BOARD:{_board_context(board)}\n"
         f"CARD:{_truncate(recommendation, 1200)}\n"
         f"KB:{_truncate(context, 1400) if context else '(none)'}"
     )
@@ -644,29 +796,16 @@ def _generate_followup(
         else:
             content = _truncate(content, 400)
         llm_messages.append({"role": msg.role, "content": content})
-    if not focus:
-        focus_hint = ""
-    elif len(focus) == 1:
-        focus_hint = (
-            f"Selected peptides: {focus[0]}. Answer only about {focus[0]}; "
-            "do not switch to other shortlist peptides.\n\n"
-        )
-    else:
-        named = ", ".join(focus)
-        focus_hint = (
-            f"Selected peptides: {named}. Cover each of these peptides in the reply. "
-            "Do not omit any selected name and do not discuss unselected shortlist peptides.\n\n"
-        )
     llm_messages.append(
         {
             "role": "user",
-            "content": f"{focus_hint}{question}\n\n(Reply ≤80 words. Bullets preferred.)",
+            "content": _followup_turn(question, board),
         }
     )
 
     return _chat_completion(
         model=settings.chat_model_followup,
         temperature=0.2,
-        max_tokens=settings.chat_max_tokens_followup,
+        max_tokens=max(settings.chat_max_tokens_followup, 480),
         messages=llm_messages,
     )

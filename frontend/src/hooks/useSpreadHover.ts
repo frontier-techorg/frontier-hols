@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { gsap, registerGsap } from "@/lib/gsap";
 
 type SpreadHoverOptions = {
@@ -36,29 +36,50 @@ export function useSpreadHover({
   const fillTweenRef = useRef<gsap.core.Tween | null>(null);
   const textTweenRef = useRef<gsap.core.Tween | null>(null);
 
-  const positionFill = useCallback((clientX: number, clientY: number) => {
-    const container = containerRef.current;
+  const resetHover = useCallback(() => {
+    registerGsap();
+    fillTweenRef.current?.kill();
+    textTweenRef.current?.kill();
+    fillTweenRef.current = null;
+    textTweenRef.current = null;
     const fill = fillRef.current;
-    if (!container || !fill) return;
+    const label = labelRef.current;
+    if (fill) gsap.set(fill, { scale: 0, opacity: 0 });
+    if (label) gsap.set(label, { color: defaultColor });
+  }, [defaultColor]);
 
-    const rect = container.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    const size = Math.hypot(rect.width, rect.height) * 2.4;
+  // Clear any in-flight navy fill when the control is disabled or remounted.
+  useEffect(() => {
+    if (enabled) return;
+    resetHover();
+  }, [enabled, resetHover]);
 
-    gsap.set(fill, {
-      width: size,
-      height: size,
-      left: x - size / 2,
-      top: y - size / 2,
-      xPercent: 0,
-      yPercent: 0,
-      scale: 0,
-      opacity: 1,
-      transformOrigin: "50% 50%",
-      backgroundColor: fillColor,
-    });
-  }, [fillColor]);
+  const positionFill = useCallback(
+    (clientX: number, clientY: number) => {
+      const container = containerRef.current;
+      const fill = fillRef.current;
+      if (!container || !fill) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const size = Math.hypot(rect.width, rect.height) * 2.4;
+
+      gsap.set(fill, {
+        width: size,
+        height: size,
+        left: x - size / 2,
+        top: y - size / 2,
+        xPercent: 0,
+        yPercent: 0,
+        scale: 0,
+        opacity: 1,
+        transformOrigin: "50% 50%",
+        backgroundColor: fillColor,
+      });
+    },
+    [fillColor],
+  );
 
   const onMouseEnter = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
@@ -104,17 +125,14 @@ export function useSpreadHover({
         );
       }
     },
-    [
-      defaultColor,
-      enabled,
-      hoverColor,
-      positionFill,
-      spreadDuration,
-    ],
+    [defaultColor, enabled, hoverColor, positionFill, spreadDuration],
   );
 
   const onMouseLeave = useCallback(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      resetHover();
+      return;
+    }
 
     const fill = fillRef.current;
     const label = labelRef.current;
@@ -124,7 +142,7 @@ export function useSpreadHover({
     textTweenRef.current?.kill();
 
     if (prefersReducedMotion()) {
-      gsap.set(fill, { scale: 0 });
+      gsap.set(fill, { scale: 0, opacity: 0 });
       if (label) gsap.set(label, { color: defaultColor });
       return;
     }
@@ -143,7 +161,7 @@ export function useSpreadHover({
         ease: "power2.out",
       });
     }
-  }, [defaultColor, enabled, leaveDuration]);
+  }, [defaultColor, enabled, leaveDuration, resetHover]);
 
   return {
     containerRef,
@@ -151,5 +169,6 @@ export function useSpreadHover({
     labelRef,
     onMouseEnter,
     onMouseLeave,
+    resetHover,
   };
 }

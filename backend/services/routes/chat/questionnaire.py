@@ -115,6 +115,174 @@ GOAL_BRANCHES = {
     },
 }
 
+# Short clinical profile for each catalog peptide. Shown on the recommendation cards.
+PEPTIDE_PROFILES: Dict[str, dict] = {
+    "Tirzepatide": {
+        "description": "A dual incretin option used when the goal is substantial weight loss in an eligible patient.",
+        "advantages": ["Strongest weight-loss signal in this catalog", "Addresses appetite and metabolic load together"],
+        "disadvantages": ["GI intolerance is common", "Not appropriate with pancreatitis history or pregnancy risk"],
+    },
+    "Semaglutide": {
+        "description": "A GLP-1 option for appetite control and weight loss when a first-line incretin fits the case.",
+        "advantages": ["Well-established metabolic evidence", "Useful when appetite is the main driver"],
+        "disadvantages": ["Nausea and GI sensitivity can limit use", "Less weight-loss effect than tirzepatide for many patients"],
+    },
+    "Tesamorelin": {
+        "description": "A GHRH analogue aimed at visceral fat, with a role when trunk fat or IGF-1 is the focus.",
+        "advantages": ["FDA-approved evidence for visceral fat", "Fits both metabolic and GH-axis goals"],
+        "disadvantages": ["Requires an IGF-1 baseline", "Fluid retention and glucose shifts can occur"],
+    },
+    "MOTS-c": {
+        "description": "A mitochondrial peptide considered as a metabolic adjunct when fat oxidation is part of the goal.",
+        "advantages": ["Targets metabolic flexibility rather than appetite alone", "Can sit beside a primary weight-loss option"],
+        "disadvantages": ["Early-stage human evidence", "Not a substitute for an approved weight-loss therapy"],
+    },
+    "AOD-9604": {
+        "description": "A lipolysis adjunct for milder fat-loss support, not a primary weight-loss therapy.",
+        "advantages": ["Narrow metabolic role when only mild support is needed", "Does not act as an appetite drug"],
+        "disadvantages": ["Early-stage evidence", "Limited effect compared with approved options"],
+    },
+    "BPC-157": {
+        "description": "A repair peptide considered for tendon, ligament, or gut-focused recovery.",
+        "advantages": ["Matches soft-tissue and GI repair goals", "Often the first recovery option on this shortlist"],
+        "disadvantages": ["Research status, including 503A changes", "Human outcome data remain limited"],
+    },
+    "TB-500": {
+        "description": "A recovery peptide aimed at muscle repair, flexibility, and broader systemic healing.",
+        "advantages": ["Useful when the injury is muscular or widespread", "Pairs with BPC-157 for soft-tissue cases"],
+        "disadvantages": ["Research status, including 503A changes", "Less specific for a single tendon or the gut"],
+    },
+    "BPC-157 + TB-500": {
+        "description": "The usual recovery stack when soft-tissue injury needs both local repair and systemic support.",
+        "advantages": ["Covers tendon and muscle together", "Common pairing for a mixed injury"],
+        "disadvantages": ["Two research peptides, so evidence is still limited", "More complex to monitor than a single option"],
+    },
+    "GHK-Cu": {
+        "description": "A copper peptide for skin, scar, and connective-tissue remodeling.",
+        "advantages": ["Best fit when skin or wound healing is the target", "Can be considered topically or by injection"],
+        "disadvantages": ["Modest role in deep tendon or muscle injury", "Visible change is slower than a recovery stack"],
+    },
+    "KPV": {
+        "description": "An anti-inflammatory peptide used when inflammation or the gut is driving the problem.",
+        "advantages": ["Fits inflammatory and gut-mediated cases", "Can support immune or recovery goals"],
+        "disadvantages": ["Early-stage evidence", "Not a stand-alone repair peptide for structural injury"],
+    },
+    "Ipamorelin + CJC-1295": {
+        "description": "A GH-secretagogue stack for a cleaner pulse when recovery or body composition is the goal.",
+        "advantages": ["Common default for a GH-axis goal", "Less hunger signal than older secretagogues"],
+        "disadvantages": ["Research stack, not an approved drug pair", "Needs IGF-1 context before use"],
+    },
+    "Sermorelin": {
+        "description": "A gentler GHRH option that stays closer to the body's own pulse.",
+        "advantages": ["Milder GH stimulation", "Prescription pathway rather than a research-only peptide"],
+        "disadvantages": ["Weaker effect on visceral fat than tesamorelin", "Still needs IGF-1 monitoring"],
+    },
+    "Ipamorelin": {
+        "description": "A single GH secretagogue for a low-noise bedtime pulse with less effect on hunger.",
+        "advantages": ["Simpler than a two-peptide stack", "Less appetite stimulation"],
+        "disadvantages": ["Research evidence only", "Narrower effect than the CJC combination"],
+    },
+    "PT-141 (Bremelanotide)": {
+        "description": "A central option for low desire or arousal, used on demand in both sexes.",
+        "advantages": ["Acts on desire rather than blood flow alone", "On-demand use rather than daily therapy"],
+        "disadvantages": ["Can raise blood pressure", "Nausea and flushing are common"],
+    },
+    "Semax": {
+        "description": "A cognitive peptide for focus, mental fatigue, and neuroprotection.",
+        "advantages": ["Fits a focus or fatigue goal", "Does not rely on sedation"],
+        "disadvantages": ["Research status, including 503A changes", "Stimulating effect may unsettle anxious patients"],
+    },
+    "Selank": {
+        "description": "A calming cognitive peptide for anxiety and clarity without sedation.",
+        "advantages": ["Fits anxiety or mood more than raw focus", "Less stimulating than Semax"],
+        "disadvantages": ["Early-stage evidence", "Not a replacement for prescribed psychiatric care"],
+    },
+    "Dihexa": {
+        "description": "A last-line cognitive peptide aimed at synaptogenesis, kept only with caution.",
+        "advantages": ["Reserved for cases that need a stronger cognitive signal", "Distinct from the milder nootropic options"],
+        "disadvantages": ["Very limited human data", "Higher uncertainty than Semax or Selank"],
+    },
+    "Thymosin alpha-1": {
+        "description": "An immune peptide for T-cell support after illness or when surveillance is the goal.",
+        "advantages": ["Clearest immune option in this catalog", "Approved in some regions"],
+        "disadvantages": ["Not a treatment for active autoimmune disease", "Effect is supportive, not curative"],
+    },
+    "LL-37": {
+        "description": "An antimicrobial peptide considered when infection recovery or wound support is the context.",
+        "advantages": ["Broad antimicrobial plus wound role", "Fits a post-infection recovery picture"],
+        "disadvantages": ["Early-stage evidence", "Can be irritating and is poorly suited to autoimmune cases"],
+    },
+    "DSIP": {
+        "description": "A sleep peptide aimed at falling asleep and sleep quality.",
+        "advantages": ["Direct match for onset and quality problems", "Separate from a GH-axis approach"],
+        "disadvantages": ["Early-stage evidence", "Does not treat sleep apnea or circadian disorders"],
+    },
+    "Epitalon": {
+        "description": "A longevity-leaning peptide considered when circadian rhythm is part of the sleep problem.",
+        "advantages": ["Fits circadian shift more than simple insomnia", "Can sit beside a sleep-quality plan"],
+        "disadvantages": ["Early-stage evidence", "Not a first choice for ordinary sleep onset"],
+    },
+    "GH-axis peptides": {
+        "description": "GH-axis options considered when poor deep sleep is secondary to a vitality goal.",
+        "advantages": ["Links sleep quality with recovery and body composition", "Useful when Branch C is already in play"],
+        "disadvantages": ["Indirect sleep effect", "Needs the same IGF-1 caution as other GH peptides"],
+    },
+}
+
+
+def _peptide_profile(name: str) -> dict:
+    profile = PEPTIDE_PROFILES.get(name) or {}
+    return {
+        "description": profile.get("description") or "",
+        "advantages": list(profile.get("advantages") or []),
+        "disadvantages": list(profile.get("disadvantages") or []),
+    }
+
+
+def _why_chosen(peptide: dict, evaluation: dict, rank: int) -> list[str]:
+    """Up to four short reasons this peptide is on the shortlist."""
+    bullets: list[str] = []
+    best = str(peptide.get("best_when") or "").strip().rstrip(".")
+    if best:
+        bullets.append(f"{best}.")
+    goal = str(evaluation.get("primary_goal") or "").strip()
+    if goal:
+        bullets.append(f"Matches the primary goal: {goal}.")
+    evidence = str(peptide.get("evidence") or "").strip()
+    if evidence:
+        bullets.append(f"Evidence level: {evidence}.")
+    if rank == 1:
+        bullets.append("Strongest overall match on this intake.")
+    else:
+        bullets.append("Kept on the shortlist as a supporting option.")
+    deduped: list[str] = []
+    for bullet in bullets:
+        if bullet not in deduped:
+            deduped.append(bullet)
+    return deduped[:4]
+
+
+def _suggested_questions(ranked: list[dict], safety_status: str) -> list[str]:
+    questions: list[str] = []
+    top = ranked[0]["name"] if ranked else ""
+    second = ranked[1]["name"] if len(ranked) > 1 else ""
+    if top:
+        questions.append(f"Why {top}?")
+    if top and second:
+        questions.append(f"{top} vs {second}?")
+    if safety_status == "blocked":
+        questions.append("Which safety blocks?")
+    elif safety_status == "caution":
+        questions.append("Which cautions apply?")
+    else:
+        questions.append("Which labs to review?")
+    deduped: list[str] = []
+    for question in questions:
+        if question not in deduped:
+            deduped.append(question)
+    return deduped[:3]
+
+
 BRANCH_QUESTIONS: Dict[str, List[dict]] = {
     "A": [
         {"id": "a_bmi_target", "text": "Target weight loss goal (% or lbs)?", "type": "text"},
@@ -572,26 +740,25 @@ def _confidence_sort_key(peptide: dict, confidence: str) -> float:
     return base
 
 
-def _clean_focus_peptides(
-    names: Optional[List[str]],
-    allowed_names: List[str],
-    *,
-    fallback: Optional[str] = None,
-) -> list[str]:
-    allowed = {name for name in allowed_names if name}
-    cleaned: list[str] = []
-    seen: set[str] = set()
-    for raw in names or []:
-        name = str(raw or "").strip()
-        if not name or name in seen or name not in allowed:
-            continue
-        seen.add(name)
-        cleaned.append(name)
-    if cleaned:
-        return cleaned
-    if fallback and fallback in allowed:
-        return [fallback]
-    return [allowed_names[0]] if allowed_names else []
+def recommendation_intro(display_name: str, board: Optional[dict] = None) -> str:
+    """Greeting shown on the recommendation card."""
+    name = (display_name or "").strip() or "there"
+    ranked = list((board or {}).get("ranked") or [])
+    if ranked:
+        return f"Hi {name}, we recommend the following for this case."
+    return f"Hi {name}, we are unable to generate a recommendation. {_short_block_reason(board)}"
+
+
+def _short_block_reason(board: Optional[dict]) -> str:
+    safety = (board or {}).get("safety") or {}
+    for stop in safety.get("hard_stops") or []:
+        text = str(stop or "").strip().rstrip(".")
+        if text:
+            return f"{text}." if len(text) <= 140 else f"{text[:137].rstrip()}."
+    reply = str((board or {}).get("reply") or "").strip()
+    if reply:
+        return reply if len(reply) <= 160 else f"{reply[:157].rstrip()}."
+    return "This case did not produce a peptide shortlist."
 
 
 def build_recommendation_board(
@@ -599,7 +766,6 @@ def build_recommendation_board(
     *,
     confidence: str = "balanced",
     preferred: Optional[str] = None,
-    focus_peptides: Optional[List[str]] = None,
 ) -> dict:
     """
     Deterministic War Room board JSON from evaluation.
@@ -628,11 +794,18 @@ def build_recommendation_board(
             recs = [match] + [p for p in recs if p.get("name") != preferred_name]
 
     ranked = []
-    for index, peptide in enumerate(recs[:4], start=1):
+    for index, peptide in enumerate(recs[:3], start=1):
+        name = peptide.get("name", "")
+        profile = _peptide_profile(name)
+        description = profile["description"] or peptide.get("best_when") or ""
         ranked.append(
             {
                 "rank": index,
-                "name": peptide.get("name", ""),
+                "name": name,
+                "description": description,
+                "why": _why_chosen(peptide, evaluation, index),
+                "advantages": profile["advantages"],
+                "disadvantages": profile["disadvantages"],
                 "evidence": peptide.get("evidence", ""),
                 "fit": peptide.get("best_when") or peptide.get("reasoning") or "",
                 "score": peptide.get("score"),
@@ -641,12 +814,6 @@ def build_recommendation_board(
         )
 
     top_name = ranked[0]["name"] if ranked else None
-    allowed_names = [item["name"] for item in ranked if item.get("name")]
-    focus = _clean_focus_peptides(
-        focus_peptides,
-        allowed_names,
-        fallback=preferred_name or top_name,
-    )
     goal = evaluation.get("primary_goal") or "this case"
     if safety_status == "blocked":
         reply = "Intake safety blocks prevent a peptide shortlist for this case."
@@ -657,18 +824,13 @@ def build_recommendation_board(
     else:
         reply = f"No peptides available for {goal} with the current safety profile."
 
-    chips = ["Why #1?", "Compare top 2", "Safety flags", "Labs checklist", "Draft clinical note"]
-    if len(ranked) < 2:
-        chips = [c for c in chips if c != "Compare top 2"]
-    if not ranked:
-        chips = ["Safety flags", "Labs checklist"]
+    chips = _suggested_questions(ranked, safety_status)
 
     return {
         "primary_goal": evaluation.get("primary_goal"),
         "secondary_goal": evaluation.get("secondary_goal"),
         "confidence": mode,
         "preferred": preferred_name,
-        "focus_peptides": focus,
         "ranked": ranked,
         "labs": list(evaluation.get("labs") or []),
         "stacks": list(evaluation.get("stacks") or []),
@@ -680,36 +842,8 @@ def build_recommendation_board(
         },
         "reply": reply,
         "chips": chips,
+        "suggested_questions": chips,
         "disclaimer": evaluation.get("disclaimer") or "",
     }
 
 
-def format_board_receipt(
-    board: dict,
-    *,
-    changes: Optional[List[dict]] = None,
-) -> str:
-    """Short chat receipt when settings change — plain text, no JSON model."""
-    lines: List[str] = []
-    if changes:
-        for change in changes:
-            field = change.get("field", "setting")
-            old = change.get("from")
-            new = change.get("to")
-            if old is not None and new is not None:
-                lines.append(f"Updated: **{field}** `{old}` → `{new}`.")
-            else:
-                lines.append(f"Updated: **{field}** → `{new}`.")
-
-    reply = board.get("reply") or ""
-    if reply:
-        lines.append(reply)
-
-    ranked = board.get("ranked") or []
-    if ranked:
-        order = " · ".join(f"{p.get('rank')}. {p.get('name')}" for p in ranked[:3])
-        lines.append(f"Shortlist: {order}")
-
-    safety = (board.get("safety") or {}).get("status", "clear")
-    lines.append(f"Safety: {safety}")
-    return "\n\n".join(lines)

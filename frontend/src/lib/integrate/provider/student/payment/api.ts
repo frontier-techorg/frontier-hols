@@ -1,18 +1,15 @@
-import { ApiRequestError, apiRequest } from "@/lib/integrate/client";
+import { apiRequest } from "@/lib/integrate/client";
 import { getStoredUser } from "@/lib/integrate/auth/storage";
 import type {
-  CardCreatePayload,
-  CardUpdatePayload,
   Membership,
   Order,
   PaginationMeta,
   Plan,
   PlanType,
-  PaymentCard,
   StudentCommerce,
 } from "@/lib/integrate/provider/student/payment/types";
 
-export type { CardCreatePayload, CardUpdatePayload, Membership, Order, Plan, PlanType, PaymentCard };
+export type { Membership, Order, Plan, PlanType };
 
 export type PaginationParams = {
   page?: number;
@@ -22,7 +19,6 @@ export type PaginationParams = {
 
 const paymentMemoryCache = new Map<string, unknown>();
 const paymentPendingRequests = new Map<string, Promise<unknown>>();
-const CARD_NOT_FOUND = "__CARD_NOT_FOUND__";
 
 function cacheKey(kind: string, ...parts: Array<string | number | undefined | null>) {
   const userId = getStoredUser()?.user_id ?? "anonymous";
@@ -77,14 +73,6 @@ export function getCachedCurrentMembership() {
   return cached ? cached.membership : undefined;
 }
 
-export function getCachedCard() {
-  const cached = readPaymentCache<{ card: PaymentCard } | typeof CARD_NOT_FOUND>(
-    cacheKey("card-default"),
-  );
-  if (cached === CARD_NOT_FOUND) return null;
-  return cached?.card;
-}
-
 export function getCachedOrders(params: PaginationParams = {}) {
   return readPaymentCache<{ items: Order[]; pagination: PaginationMeta }>(ordersCacheKey(params));
 }
@@ -123,14 +111,14 @@ export function listPlans(signal?: AbortSignal) {
   return cachedPaymentRequest<{ items: Plan[] }>(cacheKey("plans"), "/api/payment/plans", signal);
 }
 
-export function purchasePlan(plan_type: PlanType, payment_method_id?: string) {
+export function purchasePlan(plan_type: PlanType) {
   return apiRequest<{
     order: Order;
     membership?: Membership;
   }>("/api/payment/purchase", {
     method: "POST",
     auth: true,
-    body: { plan_type, payment_method_id },
+    body: { plan_type },
   }).then((result) => {
     if (result.membership) {
       writePaymentCache(cacheKey("membership-current"), { membership: result.membership });
@@ -162,6 +150,13 @@ export function getStudentCommerce(signal?: AbortSignal) {
   );
 }
 
+export function getOrder(orderId: string, signal?: AbortSignal) {
+  return apiRequest<{ order: Order }>(`/api/payment/orders/item/${encodeURIComponent(orderId)}`, {
+    auth: true,
+    signal,
+  });
+}
+
 export function listOrders(params: PaginationParams = {}, signal?: AbortSignal) {
   const key = ordersCacheKey(params);
   const search = new URLSearchParams();
@@ -175,69 +170,4 @@ export function listOrders(params: PaginationParams = {}, signal?: AbortSignal) 
     `/api/payment/orders${query ? `?${query}` : ""}`,
     signal,
   );
-}
-
-export function addCard(payload: CardCreatePayload) {
-  return apiRequest<{ card: PaymentCard }>("/api/payment/card", {
-    method: "POST",
-    auth: true,
-    body: payload,
-  }).then((result) => {
-    writePaymentCache(cacheKey("card-default"), result);
-    return result;
-  });
-}
-
-export function listCards(signal?: AbortSignal) {
-  return cachedPaymentRequest<{ items: PaymentCard[] }>(
-    cacheKey("cards"),
-    "/api/payment/cards",
-    signal,
-  );
-}
-
-export async function getCard(signal?: AbortSignal) {
-  const key = cacheKey("card-default");
-  const cached = readPaymentCache<{ card: PaymentCard } | typeof CARD_NOT_FOUND>(key);
-  if (cached === CARD_NOT_FOUND) {
-    throw new ApiRequestError("Payment card not found", "NOT_FOUND", 404);
-  }
-  if (cached !== null) return cached;
-
-  try {
-    const result = await cachedPaymentRequest<{ card: PaymentCard }>(
-      key,
-      "/api/payment/card",
-      signal,
-    );
-    return result;
-  } catch (err) {
-    if (err instanceof ApiRequestError && err.status === 404) {
-      writePaymentCache(key, CARD_NOT_FOUND);
-    }
-    throw err;
-  }
-}
-
-export function updateCard(payload: CardUpdatePayload) {
-  return apiRequest<{ card: PaymentCard }>("/api/payment/card", {
-    method: "PUT",
-    auth: true,
-    body: payload,
-  }).then((result) => {
-    writePaymentCache(cacheKey("card-default"), result);
-    return result;
-  });
-}
-
-export function removeCard() {
-  return apiRequest<Record<string, never>>("/api/payment/card", {
-    method: "DELETE",
-    auth: true,
-  }).then((result) => {
-    writePaymentCache(cacheKey("card-default"), CARD_NOT_FOUND);
-    paymentMemoryCache.delete(cacheKey("cards"));
-    deleteSessionCache(cacheKey("cards"));
-    return result;
-  });
 }

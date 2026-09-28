@@ -212,20 +212,30 @@ async def list_course_test_results(
 
     course = await lectures_service.ensure_course_exists(course_id)
 
-    def _query():
-        return _table().query(
-            KeyConditionExpression=Key("PK").eq(LessonTestResult.pk(user_id))
-            & Key("SK").begins_with(f"TEST_RESULT#{course_id}#"),
-            ScanIndexForward=True,
-        )
+    def _query_all():
+        collected: list[dict[str, Any]] = []
+        start_key = None
+        while True:
+            kwargs: dict[str, Any] = {
+                "KeyConditionExpression": Key("PK").eq(LessonTestResult.pk(user_id))
+                & Key("SK").begins_with(f"TEST_RESULT#{course_id}#"),
+                "ScanIndexForward": False,
+            }
+            if start_key:
+                kwargs["ExclusiveStartKey"] = start_key
+            response = _table().query(**kwargs)
+            collected.extend(response.get("Items") or [])
+            start_key = response.get("LastEvaluatedKey")
+            if not start_key:
+                break
+        return collected
 
-    response = await run_sync(_query)
-    items = [
-        item
-        for item in (response.get("Items") or [])
-        if item.get("entity") == LessonTestResult.ENTITY
-    ]
-    items.sort(key=lambda item: int(item.get("lesson_order") or 0))
+    raw_items = await run_sync(_query_all)
+    items = [item for item in raw_items if item.get("entity") == LessonTestResult.ENTITY]
+    items.sort(
+        key=lambda item: (str(item.get("updated_at") or ""), int(item.get("lesson_order") or 0)),
+        reverse=True,
+    )
 
     summaries = [_summary_payload(LessonTestResult.model_validate(item)) for item in items]
     total = len(summaries)

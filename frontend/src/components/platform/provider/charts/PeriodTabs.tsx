@@ -35,7 +35,7 @@ export function PeriodTabs({
 }) {
   return (
     <div
-      className="flex w-full shrink-0 flex-wrap gap-1 rounded-full bg-[color:var(--dash-surface)] p-1 sm:w-auto"
+      className="flex h-10 w-full shrink-0 items-center gap-1 sm:w-auto"
       role="tablist"
       aria-label={label}
     >
@@ -50,10 +50,10 @@ export function PeriodTabs({
             disabled={disabled}
             onClick={() => onChange(item.id)}
             className={cn(
-              "font-sans inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-3 text-sm font-medium tracking-[0.01em] transition sm:min-h-10 sm:flex-none sm:px-4",
+              "dashboard-page-action font-sans inline-flex h-10 min-h-10 max-h-10 flex-1 items-center justify-center rounded-full border border-transparent px-4 text-sm font-medium tracking-[0.01em] transition sm:flex-none",
               active
                 ? "dashboard-navy-btn text-white"
-                : "text-[color:var(--dash-muted)] hover:text-[color:var(--dash-text)] disabled:opacity-50",
+                : "text-[color:var(--dash-muted)] hover:bg-[color:var(--sidebar-hover)] hover:text-[color:var(--dash-text)] disabled:opacity-50",
             )}
           >
             {item.label}

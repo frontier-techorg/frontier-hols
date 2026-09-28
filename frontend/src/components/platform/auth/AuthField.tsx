@@ -46,7 +46,7 @@ export function AuthField({
 
       <div className="relative">
         {icon ? (
-          <span className="pointer-events-none absolute inset-y-0 left-0 flex w-11 items-center justify-center text-primary/35">
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-primary/35">
             <FieldIcon icon={icon} />
           </span>
         ) : null}

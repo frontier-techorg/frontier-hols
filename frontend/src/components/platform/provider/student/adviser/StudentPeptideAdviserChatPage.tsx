@@ -7,18 +7,14 @@ import { AdviserChatPageLayout } from "@/components/platform/provider/student/ad
 import { AdviserChatPanel } from "@/components/platform/provider/student/adviser/AdviserChatPanel";
 import { AdviserPageLayout } from "@/components/platform/provider/student/adviser/AdviserPageLayout";
 import { ChatMessagesSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
-import { MembershipLockedPanel } from "@/components/platform/provider/student/membership/MembershipGate";
+import { LecturePlansDialog } from "@/components/platform/provider/student/lectures/LecturePlansDialog";
 import { ApiRequestError } from "@/lib/integrate/client";
 import {
-  ACTIVE_PATIENT_STORAGE_KEY,
   getCachedPatient,
   getPatient,
+  writeStoredActivePatientId,
   type PatientDetail,
 } from "@/lib/integrate/provider/student/chat";
-import {
-  rankedFocusNames,
-  talkAboutHeaderLabel,
-} from "@/components/platform/provider/student/adviser/talkAbout";
 import {
   isMembershipRequiredError,
   useStudentMembershipAccess,
@@ -34,11 +30,9 @@ export function StudentPeptideAdviserChatPage({ patientId }: StudentPeptideAdvis
   const [patient, setPatient] = useState<PatientDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [apiLocked, setApiLocked] = useState(false);
-  const [boardOpen, setBoardOpen] = useState(false);
-  const [boardUpdated, setBoardUpdated] = useState(false);
 
   useEffect(() => {
-    window.sessionStorage.setItem(ACTIVE_PATIENT_STORAGE_KEY, patientId);
+    writeStoredActivePatientId(patientId);
   }, [patientId]);
 
   useEffect(() => {
@@ -95,8 +89,6 @@ export function StudentPeptideAdviserChatPage({ patientId }: StudentPeptideAdvis
             messages: updated.messages ?? current.messages,
             messages_pagination:
               updated.messages_pagination ?? current.messages_pagination,
-            recommendation_board:
-              updated.recommendation_board ?? current.recommendation_board,
             turns_used: updated.turns_used ?? current.turns_used,
             turns_max: updated.turns_max ?? current.turns_max,
           }
@@ -104,31 +96,10 @@ export function StudentPeptideAdviserChatPage({ patientId }: StudentPeptideAdvis
     );
   }, []);
 
-  const handleBoardToggle = useCallback(() => {
-    setBoardOpen((open) => {
-      if (!open) setBoardUpdated(false);
-      return !open;
-    });
-  }, []);
-
-  const focusNames = rankedFocusNames(patient?.recommendation_board);
-  const board =
-    patient?.recommendation_board
-      ? {
-          open: boardOpen,
-          updated: boardUpdated && !boardOpen,
-          peptideName: talkAboutHeaderLabel(focusNames),
-          peptideCount: focusNames.length,
-          onToggle: handleBoardToggle,
-        }
-      : null;
-
   if (!membershipAccess.ready) {
     return (
-      <AdviserChatPageLayout patientName="Consultation chat">
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <ChatMessagesSkeleton />
-        </div>
+      <AdviserChatPageLayout patientName="">
+        <ChatMessagesSkeleton pinnedComposer />
       </AdviserChatPageLayout>
     );
   }
@@ -136,9 +107,12 @@ export function StudentPeptideAdviserChatPage({ patientId }: StudentPeptideAdvis
   if (membershipAccess.locked || apiLocked) {
     return (
       <AdviserPageLayout>
-        <MembershipLockedPanel
+        <LecturePlansDialog
+          open
+          stacked
           title="Membership required"
-          description="You can still create patients and complete onboarding. An active membership is required to generate a recommendation and open consultation chat."
+          description="A plan is required to generate this recommendation and open consultation chat."
+          onClose={() => router.push("/student/adviser")}
         />
       </AdviserPageLayout>
     );
@@ -146,7 +120,7 @@ export function StudentPeptideAdviserChatPage({ patientId }: StudentPeptideAdvis
 
   if (loadError) {
     return (
-      <AdviserChatPageLayout patientName="Consultation chat">
+      <AdviserChatPageLayout patientName="">
         <div className="flex min-h-0 flex-1 flex-col justify-center">
           <AuthAlert variant="error">{loadError}</AuthAlert>
         </div>
@@ -156,26 +130,18 @@ export function StudentPeptideAdviserChatPage({ patientId }: StudentPeptideAdvis
 
   if (!patient) {
     return (
-      <AdviserChatPageLayout patientName="Consultation chat">
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <ChatMessagesSkeleton />
-        </div>
+      <AdviserChatPageLayout patientName="">
+        <ChatMessagesSkeleton pinnedComposer />
       </AdviserChatPageLayout>
     );
   }
 
   return (
-    <AdviserChatPageLayout patientName={patient.display_name} board={board}>
+    <AdviserChatPageLayout patientName={patient.display_name}>
       <AdviserChatPanel
         key={patient.patient_id}
         patient={patient}
         onPatientChange={handlePatientChange}
-        boardOpen={boardOpen}
-        onBoardOpenChange={(open) => {
-          setBoardOpen(open);
-          if (open) setBoardUpdated(false);
-        }}
-        onBoardUpdated={() => setBoardUpdated(true)}
       />
     </AdviserChatPageLayout>
   );

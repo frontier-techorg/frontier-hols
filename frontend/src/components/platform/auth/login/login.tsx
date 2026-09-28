@@ -233,7 +233,7 @@ export function LoginForm({
               onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
               className={cn(
                 authFieldClass,
-                "px-3 text-center text-xl font-semibold tracking-[0.28em] sm:px-4 sm:text-2xl sm:tracking-[0.35em]",
+                "auth-otp-field px-3 text-center font-semibold",
               )}
             />
           </div>

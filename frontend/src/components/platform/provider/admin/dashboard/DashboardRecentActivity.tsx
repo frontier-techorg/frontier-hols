@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
-import { getStoredUser } from "@/lib/integrate/auth/storage";
 import {
   formatNotificationWhen,
   getUnreadNotificationsCount,
   listNotifications,
   markNotificationRead,
   NOTIFICATIONS_CHANGED_EVENT,
-  notificationsInboxPath,
   setUnreadNotificationsCount,
   type AppNotification,
 } from "@/lib/integrate/provider/notifications";
@@ -66,26 +64,14 @@ export function DashboardRecentActivity({ className }: { className?: string }) {
     }
   }
 
-  const inboxHref = notificationsInboxPath(getStoredUser()?.role);
   const busy = loading && items.length === 0;
 
   return (
-    <section className={cn("dashboard-glass-card flex min-w-0 flex-col overflow-hidden rounded-2xl", className)}>
-      <div className="flex items-end justify-between gap-2 px-3.5 py-3.5 sm:px-5 sm:py-4">
-        <div className="min-w-0">
-          <p className="text-brand-caption font-semibold uppercase tracking-[0.08em] text-[color:var(--dash-faint)]">
-            Inbox
-          </p>
-          <h2 className="font-sans mt-1 text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg">
-            Recent activity
-          </h2>
-        </div>
-        <Link
-          href={inboxHref}
-          className="text-brand-caption inline-flex min-h-11 items-center font-semibold text-[color:var(--dash-accent)] sm:min-h-10"
-        >
-          View all
-        </Link>
+    <section className={cn("dashboard-glass-card min-w-0 overflow-hidden rounded-2xl", className)}>
+      <div className="flex items-center justify-between gap-2 px-3.5 pt-3.5 sm:px-5 sm:pt-5">
+        <h2 className="font-sans text-base font-semibold tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg">
+          Recent activity
+        </h2>
       </div>
 
       {busy ? (
@@ -102,7 +88,7 @@ export function DashboardRecentActivity({ className }: { className?: string }) {
           </p>
         </div>
       ) : (
-        <ul className="grid min-w-0 flex-1 gap-2.5 px-3.5 pb-4 sm:px-5">
+        <ul className="mt-3.5 grid min-w-0 gap-1 px-3.5 pb-3.5 sm:mt-4 sm:px-5 sm:pb-5">
           {items.map((item) => {
             const when = formatNotificationWhen(item.created_at, nowMs);
             const inner = (
@@ -130,7 +116,7 @@ export function DashboardRecentActivity({ className }: { className?: string }) {
               </>
             );
             const className = cn(
-              "notify-inbox-item flex min-h-11 w-full min-w-0 items-start gap-2.5 overflow-hidden rounded-2xl bg-[color:var(--dash-soft)]/80 px-3.5 py-3 text-left sm:gap-3",
+              "notify-inbox-item flex w-full min-w-0 items-start gap-2.5 overflow-hidden rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[color:var(--sidebar-hover)] sm:gap-3",
               !item.read && "notify-inbox-item--unread",
             );
 

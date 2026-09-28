@@ -1,4 +1,4 @@
-"""Payment service — plans, purchases, orders, cards."""
+"""Payment service — plans, purchases, orders."""
 
 from __future__ import annotations
 
@@ -19,7 +19,6 @@ from database_entities import (
     MembershipStatus,
     Order,
     OrderStatus,
-    PaymentMethod,
     Plan,
     PlanType,
     PLAN_DURATIONS,
@@ -40,12 +39,6 @@ from services.common.payment_gateway import (
     CardChargeRequest,
     process_card_charge,
 )
-from services.common.payment_crypto import (
-    detect_card_brand,
-    encrypt_value,
-    mask_card_number,
-    normalize_card_number,
-)
 from services.routes.auth.service import get_user_by_id
 
 logger = logging.getLogger(__name__)
@@ -57,24 +50,6 @@ def _table():
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _public_card(item: dict[str, Any]) -> dict[str, Any]:
-    last4 = item.get("card_last4") or "0000"
-    return {
-        "payment_method_id": item.get("payment_method_id"),
-        "card_holder_name": item.get("card_holder_name"),
-        "card_number_masked": mask_card_number(last4),
-        "card_last4": last4,
-        "exp_month": item.get("exp_month"),
-        "exp_year": item.get("exp_year"),
-        "brand": item.get("brand"),
-        "is_default": item.get("is_default", False),
-        "has_cvc": bool(item.get("cvc_encrypted")),
-        "has_pin": bool(item.get("pin_encrypted")),
-        "billing_address": item.get("billing_address"),
-        "created_at": item.get("created_at"),
-    }
 
 
 async def ensure_default_plans() -> None:
@@ -160,229 +135,6 @@ async def update_plan_price(
     }
 
 
-async def _get_payment_method(user_id: str, payment_method_id: str) -> Optional[dict[str, Any]]:
-    def _fetch():
-        response = _table().get_item(
-            Key={
-                "PK": PaymentMethod.pk(user_id),
-                "SK": PaymentMethod.sk(payment_method_id),
-            },
-        )
-        return response.get("Item")
-
-    return await run_sync(_fetch)
-
-
-async def _list_payment_methods(user_id: str) -> list[dict[str, Any]]:
-    def _fetch():
-        response = _table().query(
-            KeyConditionExpression=Key("PK").eq(PaymentMethod.pk(user_id))
-            & Key("SK").begins_with("PAYMENT#"),
-        )
-        return response.get("Items", [])
-
-    return await run_sync(_fetch)
-
-
-async def _clear_default_cards(user_id: str) -> None:
-    for item in await _list_payment_methods(user_id):
-        if item.get("is_default"):
-            await run_sync(
-                _table().update_item,
-                Key={"PK": item["PK"], "SK": item["SK"]},
-                UpdateExpression="SET is_default = :false",
-                ExpressionAttributeValues={":false": False},
-            )
-
-
-async def add_card(
-    user_id: str,
-    *,
-    card_number: str,
-    exp_month: int,
-    exp_year: int,
-    cvc: str,
-    pin: Optional[str] = None,
-    card_holder_name: Optional[str] = None,
-    is_default: bool = False,
-    billing_address: Optional[dict[str, Any]] = None,
-) -> dict[str, Any]:
-    existing_cards = await _list_payment_methods(user_id)
-    if existing_cards:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "error": "You already have a saved card. Use edit card to update your card details.",
-                "error_code": ErrorCodes.CONFLICT,
-            },
-        )
-
-    digits = normalize_card_number(card_number)
-    if len(cvc) not in (3, 4):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "CVC must be 3 or 4 digits")
-    if pin is not None and (len(pin) < 4 or len(pin) > 6 or not pin.isdigit()):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "PIN must be 4 to 6 digits")
-
-    payment_method_id = uuid.uuid4().hex
-
-    record = PaymentMethod(
-        user_id=user_id,
-        payment_method_id=payment_method_id,
-        card_holder_name=card_holder_name,
-        card_last4=digits[-4:],
-        card_number_encrypted=encrypt_value(digits),
-        exp_month=exp_month,
-        exp_year=exp_year,
-        cvc_encrypted=encrypt_value(cvc),
-        pin_encrypted=encrypt_value(pin) if pin else None,
-        brand=detect_card_brand(digits),
-        is_default=True,
-        billing_address=billing_address,
-    )
-    item = record.to_item()
-    await run_sync(_table().put_item, Item=item)
-    logger.info("Payment card added for user_id=%s", user_id)
-    return _public_card(item)
-
-
-async def edit_card(
-    user_id: str,
-    payment_method_id: str,
-    *,
-    card_number: Optional[str] = None,
-    exp_month: Optional[int] = None,
-    exp_year: Optional[int] = None,
-    cvc: Optional[str] = None,
-    pin: Optional[str] = None,
-    card_holder_name: Optional[str] = None,
-    is_default: Optional[bool] = None,
-    billing_address: Optional[dict[str, Any]] = None,
-) -> dict[str, Any]:
-    item = await _get_payment_method(user_id, payment_method_id)
-    if not item:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Card not found")
-
-    fields: dict[str, Any] = {}
-    if card_number is not None:
-        digits = normalize_card_number(card_number)
-        fields["card_last4"] = digits[-4:]
-        fields["card_number_encrypted"] = encrypt_value(digits)
-        fields["brand"] = detect_card_brand(digits)
-    if exp_month is not None:
-        fields["exp_month"] = exp_month
-    if exp_year is not None:
-        fields["exp_year"] = exp_year
-    if cvc is not None:
-        if len(cvc) not in (3, 4):
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "CVC must be 3 or 4 digits")
-        fields["cvc_encrypted"] = encrypt_value(cvc)
-    if pin is not None:
-        if len(pin) < 4 or len(pin) > 6 or not pin.isdigit():
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "PIN must be 4 to 6 digits")
-        fields["pin_encrypted"] = encrypt_value(pin)
-    if card_holder_name is not None:
-        fields["card_holder_name"] = card_holder_name
-    if billing_address is not None:
-        fields["billing_address"] = billing_address
-    if is_default is True:
-        await _clear_default_cards(user_id)
-        fields["is_default"] = True
-    elif is_default is False:
-        fields["is_default"] = False
-
-    if not fields:
-        return _public_card(item)
-
-    expr_names = {f"#k{i}": key for i, key in enumerate(fields)}
-    expr_values = {f":v{i}": value for i, value in enumerate(fields.values())}
-    update_parts = [f"{name} = {value}" for name, value in zip(expr_names, expr_values)]
-
-    def _update():
-        response = _table().update_item(
-            Key={"PK": item["PK"], "SK": item["SK"]},
-            UpdateExpression="SET " + ", ".join(update_parts),
-            ExpressionAttributeNames=expr_names,
-            ExpressionAttributeValues=expr_values,
-            ReturnValues="ALL_NEW",
-        )
-        return response["Attributes"]
-
-    updated = await run_sync(_update)
-    return _public_card(updated)
-
-
-async def _get_student_card_item(user_id: str) -> Optional[dict[str, Any]]:
-    """Return the student's saved card record (one card per account)."""
-    cards = await _list_payment_methods(user_id)
-    return cards[0] if cards else None
-
-
-async def get_student_card(user_id: str) -> dict[str, Any]:
-    """Get the authenticated student's saved card (resolved from token/user id)."""
-    item = await _get_student_card_item(user_id)
-    if not item:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No saved card found")
-    return _public_card(item)
-
-
-async def get_student_payment_method_id(user_id: str) -> str:
-    item = await _get_student_card_item(user_id)
-    if not item:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No saved card found")
-    return item["payment_method_id"]
-
-
-async def edit_student_card(
-    user_id: str,
-    *,
-    card_number: Optional[str] = None,
-    exp_month: Optional[int] = None,
-    exp_year: Optional[int] = None,
-    cvc: Optional[str] = None,
-    pin: Optional[str] = None,
-    card_holder_name: Optional[str] = None,
-    billing_address: Optional[dict[str, Any]] = None,
-) -> dict[str, Any]:
-    """Edit the authenticated student's saved card (resolved from token/user id)."""
-    payment_method_id = await get_student_payment_method_id(user_id)
-    return await edit_card(
-        user_id,
-        payment_method_id,
-        card_number=card_number,
-        exp_month=exp_month,
-        exp_year=exp_year,
-        cvc=cvc,
-        pin=pin,
-        card_holder_name=card_holder_name,
-        is_default=True,
-        billing_address=billing_address,
-    )
-
-
-async def delete_student_card(user_id: str) -> None:
-    """Remove the authenticated student's saved card."""
-    item = await _get_student_card_item(user_id)
-    if not item:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No saved card found")
-
-    def _delete():
-        _table().delete_item(Key={"PK": item["PK"], "SK": item["SK"]})
-
-    await run_sync(_delete)
-    logger.info("Payment card removed for user_id=%s", user_id)
-
-
-async def get_card(user_id: str, payment_method_id: str) -> dict[str, Any]:
-    item = await _get_payment_method(user_id, payment_method_id)
-    if not item:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Card not found")
-    return _public_card(item)
-
-
-async def list_cards(user_id: str) -> list[dict[str, Any]]:
-    return [_public_card(item) for item in await _list_payment_methods(user_id)]
-
-
 def _parse_iso_datetime(value: str) -> datetime:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
@@ -454,6 +206,9 @@ def _public_order_item(item: dict[str, Any], *, include_affiliate: bool = False)
     row = {
         "order_id": item.get("order_id"),
         "plan_type": item.get("plan_type"),
+        "item_kind": item.get("item_kind") or ("webinar" if item.get("webinar_id") else "plan"),
+        "webinar_id": item.get("webinar_id"),
+        "webinar_title": item.get("webinar_title"),
         "amount": normalize_value(item.get("amount")),
         "currency": item.get("currency", "USD"),
         "status": item.get("status"),
@@ -581,19 +336,39 @@ async def list_orders(
     }
 
 
+async def get_order(user_id: str, order_id: str) -> dict[str, Any]:
+    """Return one of the student's orders for the invoice view."""
+    needle = str(order_id or "").strip()
+    if not needle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+
+    query_kwargs: dict[str, Any] = {
+        "KeyConditionExpression": Key("PK").eq(Membership.pk(user_id))
+        & Key("SK").begins_with("ORDER#"),
+    }
+    while True:
+        def _query(kw=query_kwargs):
+            return _table().query(**kw)
+
+        response = await run_sync(_query)
+        for item in response.get("Items") or []:
+            if str(item.get("order_id") or "") == needle:
+                return _public_order_item(item)
+        last_key = response.get("LastEvaluatedKey")
+        if not last_key:
+            break
+        query_kwargs["ExclusiveStartKey"] = last_key
+
+    raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+
+
 async def purchase_plan(
     user_id: str,
     plan_type: PlanType,
-    payment_method_id: Optional[str] = None,
 ) -> dict[str, Any]:
     user = await get_user_by_id(user_id)
     if not user or user.get("role") != UserRole.STUDENT.value:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only students can purchase plans")
-
-    resolved_payment_method_id = payment_method_id or await get_student_payment_method_id(user_id)
-    card = await _get_payment_method(user_id, resolved_payment_method_id)
-    if not card:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Payment method not found")
 
     await ensure_default_plans()
     plan = await get_plan(plan_type)
@@ -619,13 +394,10 @@ async def purchase_plan(
     charge = await process_card_charge(
         CardChargeRequest(
             user_id=user_id,
-            payment_method_id=resolved_payment_method_id,
             amount=float(amount),
             currency=plan.get("currency", "USD"),
             plan_type=plan_type.value,
             order_id=order_id,
-            card_last4=card.get("card_last4"),
-            card=card,
         )
     )
     if not charge.success:
@@ -637,14 +409,14 @@ async def purchase_plan(
             amount=float(amount),
             currency=plan.get("currency", "USD"),
             order_id=order_id,
-            card_last4=card.get("card_last4"),
-            failure_reason=charge.message or "Card charge failed.",
+            card_last4=None,
+            failure_reason=charge.message or "Payment failed.",
             previous_plan=previous_plan or None,
         )
         raise HTTPException(
             status.HTTP_402_PAYMENT_REQUIRED,
             detail={
-                "error": charge.message or "Card charge failed.",
+                "error": charge.message or "Payment failed.",
                 "error_code": ErrorCodes.PAYMENT_FAILED,
             },
         )
@@ -659,7 +431,7 @@ async def purchase_plan(
         amount=float(amount),
         currency=plan.get("currency", "USD"),
         status=OrderStatus.PAID,
-        payment_method_id=resolved_payment_method_id,
+        payment_method_id=None,
         affiliate_id=affiliate_id,
         affiliate_commission=affiliate_commission,
         platform_profit=platform_profit,
@@ -759,7 +531,7 @@ async def purchase_plan(
             amount=float(amount),
             currency=plan.get("currency", "USD"),
             order_id=order_id,
-            card_last4=card.get("card_last4"),
+            card_last4=None,
             end_date=membership.end_date,
             affiliate=affiliate,
             affiliate_commission=commission_value,
@@ -774,7 +546,7 @@ async def purchase_plan(
             "amount": amount,
             "currency": plan.get("currency", "USD"),
             "status": OrderStatus.PAID.value,
-            "payment_method_id": resolved_payment_method_id,
+            "payment_method_id": None,
             "created_at": created_at,
             "gateway_transaction_id": charge.transaction_id,
             "payment_processor": processor,

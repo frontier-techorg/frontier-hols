@@ -1,7 +1,7 @@
 /** Brand typography for portal UI (Google Sans headings/labels, Gilroy body). */
 
 export const portalNavItemClass =
-  "font-sans text-sm font-medium tracking-[0.005em] md:text-base";
+  "font-sans text-sm font-medium tracking-[0.005em]";
 
 export const portalNavFlyoutLabelClass =
   "text-brand-caption mb-1.5 px-3 pt-1 font-semibold uppercase tracking-[0.08em] text-[color:var(--sidebar-muted)]";

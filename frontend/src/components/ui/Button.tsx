@@ -44,11 +44,12 @@ export function Button({
   const defaultColor = variant === "glass" ? glassRest : spread.textDefault;
   const hoverColor = variant === "glass" ? "#142644" : spread.textHover;
 
-  const { containerRef, fillRef, labelRef, onMouseEnter, onMouseLeave } =
+  const { containerRef, fillRef, labelRef, onMouseEnter, onMouseLeave, resetHover } =
     useSpreadHover({
       fillColor: spread.fill,
       defaultColor,
       hoverColor,
+      enabled: !disabled,
     });
 
   useEffect(() => {
@@ -59,11 +60,23 @@ export function Button({
     return () => window.removeEventListener(PORTAL_THEME_CHANGE_EVENT, sync);
   }, [variant]);
 
+  // Keep the resting yellow state whenever the control disables or remounts.
+  useEffect(() => {
+    resetHover();
+  }, [disabled, resetHover]);
+
   const classes = getButtonClassName(
     variant,
-    disabled ? cn("pointer-events-none opacity-60", className) : className,
+    disabled ? cn("pointer-events-none opacity-45", className) : className,
     size,
   );
+
+  const handleClick = () => {
+    // Clear the navy fill before navigation/state changes so the next view
+    // does not inherit a stuck blue button.
+    resetHover();
+    onClick?.();
+  };
 
   const inner = (
     <>
@@ -87,7 +100,7 @@ export function Button({
       <Link
         ref={containerRef as React.RefObject<HTMLAnchorElement>}
         href={href}
-        onClick={onClick}
+        onClick={handleClick}
         className={classes}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
@@ -102,10 +115,10 @@ export function Button({
       ref={containerRef as React.RefObject<HTMLButtonElement>}
       type={type}
       disabled={disabled}
-      onClick={onClick}
+      onClick={disabled ? undefined : handleClick}
       className={classes}
       onMouseEnter={disabled ? undefined : onMouseEnter}
-      onMouseLeave={disabled ? undefined : onMouseLeave}
+      onMouseLeave={onMouseLeave}
     >
       {inner}
     </button>

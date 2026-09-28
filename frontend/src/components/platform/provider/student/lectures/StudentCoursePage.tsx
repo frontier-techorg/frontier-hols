@@ -17,9 +17,11 @@ import {
 import {
   CoursePageLayout,
 } from "@/components/platform/provider/student/lectures/CoursePageLayout";
-import { CoursePageSkeleton } from "@/components/platform/provider/student/DashboardSkeletons";
+import {
+  CoursePageSkeleton,
+  lectureOverviewGridClass,
+} from "@/components/platform/provider/student/DashboardSkeletons";
 import { LectureMembershipLockedScreen } from "@/components/platform/provider/student/lectures/LectureMembershipLock";
-import { LecturesPageLayout } from "@/components/platform/provider/student/lectures/LecturesPageLayout";
 import {
   getPortalThemeSnapshot,
   subscribePortalTheme,
@@ -140,9 +142,17 @@ export function StudentCoursePage({ courseId }: StudentCoursePageProps) {
 
   if (!membershipAccess.ready) {
     return (
-      <LecturesPageLayout>
+      <CoursePageLayout
+        title="Course"
+        description=""
+        courseId={courseId}
+        courseNavActive="overview"
+        backHref="/student/lectures"
+        backLabel="All lectures"
+        hideHero
+      >
         <CoursePageSkeleton />
-      </LecturesPageLayout>
+      </CoursePageLayout>
     );
   }
 
@@ -165,10 +175,8 @@ export function StudentCoursePage({ courseId }: StudentCoursePageProps) {
       {loading && !course ? <CoursePageSkeleton /> : null}
 
       {course ? (
-        <div
-          ref={stageRef}
-          className="lecture-overview-stage grid w-full min-w-0 max-w-full items-start gap-3 sm:gap-4 md:gap-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.18fr)] xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.22fr)]"
-        >
+        <div className="@container min-w-0 w-full">
+        <div ref={stageRef} className={lectureOverviewGridClass}>
           <HolsVolume course={course} courseId={courseId} topicGroups={topicGroups} />
 
           <TableOfContents
@@ -179,6 +187,7 @@ export function StudentCoursePage({ courseId }: StudentCoursePageProps) {
               setExpandedTopic((current) => (current === name ? null : name))
             }
           />
+        </div>
         </div>
       ) : null}
     </CoursePageLayout>
@@ -472,7 +481,7 @@ function TableOfContents({
         </div>
         <Link
           href={`/student/lectures/${courseId}/lessons`}
-          className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10 sm:w-auto"
+          className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full shrink-0 items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:w-auto"
         >
           Start reading
           <SidebarSvgIcon name="next" size={15} />
@@ -480,7 +489,7 @@ function TableOfContents({
       </div>
 
       {topicGroups.length === 0 ? (
-        <p className="text-brand-body py-10 text-center text-[color:var(--dash-faint)]">
+        <p className="py-10 text-center font-sans text-sm text-[color:var(--dash-faint)]">
           No chapters available yet.
         </p>
       ) : (
@@ -515,7 +524,6 @@ function TopicChapter({
   onToggle: () => void;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const topicLessonsHref = `/student/lectures/${courseId}/lessons?l1_name=${encodeURIComponent(topic.l1_name)}`;
 
   useEffect(() => {
     const panel = panelRef.current;
@@ -548,17 +556,17 @@ function TopicChapter({
         onClick={onToggle}
         data-expanded={expanded}
         className={cn(
-          "course-toc-row flex min-h-11 w-full items-start gap-2.5 rounded-xl px-2.5 py-2.5 text-left sm:min-h-0 sm:items-center sm:gap-4 sm:px-3.5 sm:py-3",
+          "course-toc-row flex min-h-10 w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left sm:gap-3 sm:px-3",
           expanded && "bg-[color:var(--dash-soft)]",
         )}
         aria-expanded={expanded}
       >
-        <span className="dashboard-tool-icon course-toc-badge mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[color:var(--dash-text)] sm:mt-0 sm:h-10 sm:w-10">
+        <span className="dashboard-tool-icon course-toc-badge flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[color:var(--dash-text)]">
           <RomanChapterIcon index={index} size={18} aria-hidden />
           <span className="sr-only">Chapter {index + 1}</span>
         </span>
         <span className="min-w-0 flex-1">
-          <span className="font-sans block break-words text-sm font-semibold leading-snug tracking-[0.005em] text-[color:var(--dash-text)] sm:text-lg sm:leading-normal">
+          <span className="font-sans block break-words text-sm font-semibold leading-5 tracking-[0.005em] text-[color:var(--dash-text)]">
             {topic.l1_name}
           </span>
           <span className="text-brand-caption mt-0.5 block text-[color:var(--dash-faint)]">
@@ -566,30 +574,16 @@ function TopicChapter({
             lesson{topic.lesson_count === 1 ? "" : "s"}
           </span>
         </span>
-        <span
-          className={cn(
-            "course-toc-chevron mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full sm:mt-0 sm:h-9 sm:w-9",
-            expanded
-              ? "dashboard-navy-btn text-white"
-              : "dashboard-pill-soft text-[color:var(--dash-muted)]",
-          )}
-          aria-hidden
-        >
+        <span className="course-toc-chevron flex shrink-0 items-center justify-center rounded-full" aria-hidden>
           <SidebarSvgIcon name={expanded ? "chevron-up" : "chevron-down"} size={16} strokeWidth={2.25} />
         </span>
       </button>
 
       <div ref={panelRef} className="overflow-hidden" style={{ height: 0, opacity: 0 }}>
-        <div className="pb-3 pl-2 pr-2 sm:pl-[3.25rem]">
-          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-brand-caption text-[color:var(--dash-faint)]">In this chapter</p>
-            <Link
-              href={topicLessonsHref}
-              className="dashboard-pill-soft text-brand-caption inline-flex min-h-11 items-center justify-center rounded-full px-3.5 font-medium text-[color:var(--dash-text)] transition hover:opacity-80 sm:min-h-8 sm:px-3"
-            >
-              Open chapter
-            </Link>
-          </div>
+        <div className="pb-2">
+          <p className="mb-1.5 pl-[calc(0.625rem+2rem+0.625rem)] pt-2 font-sans text-sm text-[color:var(--dash-faint)] sm:pl-[calc(0.75rem+2rem+0.75rem)]">
+            In this chapter
+          </p>
           {topic.sections.length === 0 ? (
             <p className="text-brand-caption py-2 text-[color:var(--dash-faint)]">No sections yet.</p>
           ) : (
@@ -625,9 +619,9 @@ function SectionEntry({
     <li>
       <Link
         href={href}
-        className="course-section-row hols-option-hover flex min-h-11 items-start gap-2.5 rounded-lg px-2 py-2.5 sm:min-h-0 sm:items-baseline sm:gap-3 sm:px-2.5"
+        className="course-section-row hols-option-hover flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-1.5 font-sans text-sm sm:gap-3 sm:px-3"
       >
-        <span className="font-sans mt-0.5 w-6 shrink-0 text-xs font-semibold tabular-nums text-[color:var(--dash-dim)] sm:mt-0">
+        <span className="font-sans w-8 shrink-0 text-center text-xs font-semibold tabular-nums text-[color:var(--dash-dim)]">
           {String(index + 1).padStart(2, "0")}
         </span>
         <span className="min-w-0 flex-1 border-b border-dotted border-[color:var(--dash-surface-border)] pb-1">
@@ -635,7 +629,7 @@ function SectionEntry({
             {section.l2_name}
           </span>
         </span>
-        <span className="text-brand-caption mt-0.5 shrink-0 text-[color:var(--dash-faint)] sm:mt-0">
+        <span className="shrink-0 font-sans text-sm text-[color:var(--dash-faint)]">
           {section.item_count}
         </span>
       </Link>

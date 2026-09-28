@@ -17,6 +17,7 @@ export type SidebarIconName =
   | "search"
   | "logout"
   | "previous"
+  | "back"
   | "next"
   | "cross"
   | "roman"
@@ -194,6 +195,12 @@ const ICON_PATHS: Record<SidebarIconName, React.ReactNode> = {
       <path d="M8.5 12h11" />
     </>
   ),
+  back: (
+    <>
+      <circle cx="12" cy="12" r="9.15" fill="none" stroke="currentColor" strokeWidth="1.9" />
+      <path fill="currentColor" stroke="none" d="M12.8 8.6 7.4 12 12.8 15.4v-2.1h3.8v-2.6h-3.8z" />
+    </>
+  ),
   next: (
     <>
       <path d="M9.25 5.5 15.75 12l-6.5 6.5" />
@@ -234,13 +241,12 @@ const ICON_PATHS: Record<SidebarIconName, React.ReactNode> = {
       <path d="M12 16.85h.01" />
     </>
   ),
-  up: <path d="M5.5 14.75 12 8.25l6.5 6.5" />,
+  up: <path d="M4.5 16 12 8.5l7.5 7.5" />,
   send: (
-    <path
-      d="M3.85 10.55 19.9 3.7a.95.95 0 0 1 1.3 1.12L14.7 20.4a1 1 0 0 1-1.78.12l-2.85-6.45-6.45-2.85a1 1 0 0 1 .23-1.67Z"
-      fill="currentColor"
-      stroke="none"
-    />
+    <>
+      <path d="M12 18.25V5.75" />
+      <path d="M6.25 11.5 12 5.75 17.75 11.5" />
+    </>
   ),
   "chevron-down": <path d="M5.5 9 12 15.5 18.5 9" />,
   "chevron-up": <path d="M5.5 15 12 8.5 18.5 15" />,

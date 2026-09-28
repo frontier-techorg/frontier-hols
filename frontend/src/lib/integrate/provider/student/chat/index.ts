@@ -12,10 +12,11 @@ export {
   invalidateAdviserCache,
   listPatients,
   prefetchAdviserBootstrap,
+  readStoredActivePatientId,
   recommendPatient,
+  writeStoredActivePatientId,
   savePatientIntake,
   sendPatientMessage,
-  updatePatientBoard,
 } from "@/lib/integrate/provider/student/chat/api";
 export { ACTIVE_PATIENT_STORAGE_KEY } from "@/lib/integrate/provider/student/chat/constants";
 export {
@@ -35,6 +36,7 @@ export type {
   BoardConfidence,
   ChatHealth,
   ChatInfo,
+  ChatReply,
   ChatMessagesPagination,
   FlowQuestion,
   FlowStage,

@@ -1,10 +1,6 @@
-import { PortalGate } from "@/components/platform/provider/PortalGate";
-import { StudentPaymentPage } from "@/components/platform/provider/student/payment/StudentPaymentPage";
+import { redirect } from "next/navigation";
 
+/** Legacy payment URL — membership plans now live on the profile page. */
 export default function StudentPaymentRoute() {
-  return (
-    <PortalGate role="student">
-      <StudentPaymentPage />
-    </PortalGate>
-  );
+  redirect("/student/plans");
 }

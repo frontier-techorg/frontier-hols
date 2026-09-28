@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
 import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
+import { Button } from "@/components/ui/Button";
 
 export type CreateAffiliateFormValues = {
   first_name: string;
@@ -110,7 +111,7 @@ export function CreateAffiliateDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="adviser-dialog-panel adviser-dialog-panel--center relative z-10 flex max-h-[min(88svh,40rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-2xl"
+        className="adviser-dialog-panel adviser-dialog-panel--center relative z-10 flex max-h-[min(88svh,46rem)] w-full max-w-lg min-w-0 flex-col overflow-hidden rounded-2xl"
         onSubmit={(event) => {
           event.preventDefault();
           if (!canSubmit) return;
@@ -142,11 +143,10 @@ export function CreateAffiliateDialog({
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
-            className="adviser-onboarding-close inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:h-12 sm:w-12"
+            className="adviser-onboarding-close inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50"
             aria-label="Close dialog"
           >
-            <SidebarSvgIcon name="cross" size={24} strokeWidth={2.2} className="sm:hidden" />
-            <SidebarSvgIcon name="cross" size={28} strokeWidth={2.15} className="hidden sm:block" />
+            <SidebarSvgIcon name="cross" size={22} strokeWidth={2.2} />
           </button>
         </div>
 
@@ -293,7 +293,7 @@ export function CreateAffiliateDialog({
               }
               onClose();
             }}
-            className="dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action dashboard-pill-soft font-sans inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium text-[color:var(--dash-text)] disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
           >
             {phase === "confirm" ? (
               <>
@@ -304,10 +304,10 @@ export function CreateAffiliateDialog({
               "Cancel"
             )}
           </button>
-          <button
+          <Button
             type="submit"
             disabled={!canSubmit}
-            className="dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-semibold text-white disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto"
+            className="lecture-page-action w-full px-5 sm:w-auto"
           >
             {isSubmitting ? (
               <>
@@ -322,7 +322,7 @@ export function CreateAffiliateDialog({
                 <SidebarSvgIcon name="next" size={14} strokeWidth={2.2} />
               </>
             )}
-          </button>
+          </Button>
         </div>
       </form>
     </div>,

@@ -72,6 +72,7 @@ export function AffiliateEarningsChart({
       caption="Time series"
       title="Earnings"
       money
+      fill
       labels={labels}
       headerRight={<PeriodTabs period={period} onChange={onPeriodChange} disabled={loading} label="Earnings period" />}
       series={[

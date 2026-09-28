@@ -46,19 +46,19 @@ type CalculatorReconSceneProps = {
  * `max-[390px]` targets iPhone SE / small phones.
  */
 const vialSizeClass =
-  "w-[3.1rem] max-[390px]:w-[2.9rem] sm:w-[4.75rem] md:w-[7.25rem]";
+  "w-[4.75rem] max-[390px]:w-[4.25rem] sm:w-[5.25rem] md:w-[7.25rem]";
 const waterVialSizeClass =
-  "w-[4rem] max-[390px]:w-[3.75rem] sm:w-[6.2rem] md:w-[9.4rem]";
+  "w-[6.2rem] max-[390px]:w-[5.5rem] sm:w-[6.75rem] md:w-[9.4rem]";
 /**
  * Draw (animation) column + art widths — match overview so measurement and
  * reconstitution stay at the same vial scale.
  */
 const drawColumnClass =
-  "w-[4rem] max-[390px]:w-[3.75rem] sm:w-[6.2rem] md:w-[9.4rem]";
+  "w-[6.2rem] max-[390px]:w-[5.5rem] sm:w-[6.75rem] md:w-[9.4rem]";
 const drawVialArtClass =
-  "w-[3.1rem] max-[390px]:w-[2.9rem] sm:w-[4.75rem] md:w-[7.25rem]";
+  "w-[4.75rem] max-[390px]:w-[4.25rem] sm:w-[5.25rem] md:w-[7.25rem]";
 const drawWaterVialArtClass =
-  "w-[4rem] max-[390px]:w-[3.75rem] sm:w-[6.2rem] md:w-[9.4rem]";
+  "w-[6.2rem] max-[390px]:w-[5.5rem] sm:w-[6.75rem] md:w-[9.4rem]";
 /**
  * Back (liquid) + front (glass) overlays MUST share this exact flex layout.
  * Top padding is applied inline as `paddingTop` based on the selected syringe
@@ -199,7 +199,7 @@ export function CalculatorReconScene({
         className={cn(
           preview
             ? "mx-auto flex h-full min-h-0 w-full flex-col items-center px-1 pt-1.5 pb-1"
-            : "mx-auto flex w-full max-w-[18rem] min-h-[18rem] flex-col items-center px-2 pt-6 pb-7 max-[390px]:max-w-[17rem] max-[390px]:min-h-[17rem] max-[390px]:px-1.5 max-[390px]:pt-5 max-[390px]:pb-6 sm:max-w-[24rem] sm:min-h-[22rem] sm:px-2 sm:pt-7 sm:pb-8 md:max-w-lg md:min-h-[26rem] md:pt-8 md:pb-9",
+            : "mx-auto flex h-auto w-full max-w-none flex-col items-center overflow-visible px-1 pt-3 pb-2 max-[390px]:px-0.5 sm:px-2 sm:pt-4 sm:pb-3 md:max-w-lg md:pt-5 md:pb-4",
           className,
         )}
       >
@@ -224,7 +224,7 @@ export function CalculatorReconScene({
           className={
             preview
               ? "min-h-3 w-full min-w-0 flex-1"
-              : "min-h-8 w-full min-w-0 flex-1 max-[390px]:min-h-6 sm:min-h-10 md:min-h-12"
+              : "h-3 w-full min-w-0 shrink-0 sm:h-4 md:h-5"
           }
           aria-hidden
         />
@@ -263,7 +263,7 @@ export function CalculatorReconScene({
       className={cn(
         // Scene is clipped so the syringe never pokes outside the card.
         // The paddingTop + vial height gives enough room for the full plunger.
-        "relative mx-auto w-full max-w-lg overflow-hidden px-0 sm:max-w-2xl sm:px-4 md:max-w-3xl md:px-6",
+        "relative mx-auto w-full max-w-lg overflow-visible px-0 sm:max-w-2xl sm:px-4 md:max-w-3xl md:px-6",
         // Scene height follows padding + vials — no forced tall floor (that
         // left a huge empty band under the bottles on phones).
         drawSyringeLarge ? "min-h-0" : "min-h-[9rem] max-[390px]:min-h-[8.5rem] sm:min-h-[14rem] md:min-h-[16rem]",

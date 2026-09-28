@@ -352,58 +352,6 @@ class RefreshTokenRecord(BaseEntity):
 
 
 # --------------------------------------------------------------------------- #
-# PAYMENT METHOD  (separate collection — no card data on the profile)
-# --------------------------------------------------------------------------- #
-class PaymentMethod(BaseEntity):
-    user_id: str
-    payment_method_id: str
-    provider: str = "internal"
-    card_holder_name: Optional[str] = None
-    card_last4: Optional[str] = None
-    card_number_encrypted: Optional[str] = None
-    exp_month: Optional[int] = None
-    exp_year: Optional[int] = None
-    cvc_encrypted: Optional[str] = None
-    pin_encrypted: Optional[str] = None
-    brand: Optional[str] = None
-    is_default: bool = False
-    billing_address: Optional[Address] = None
-    created_at: str = Field(default_factory=now_iso)
-
-    ENTITY: ClassVar[str] = "PAYMENT_METHOD"
-
-    @staticmethod
-    def pk(user_id: str) -> str:
-        return f"USER#{user_id}"
-
-    @staticmethod
-    def sk(payment_method_id: str) -> str:
-        return f"PAYMENT#{payment_method_id}"
-
-    def to_item(self) -> dict[str, Any]:
-        return self._clean(
-            {
-                "PK": self.pk(self.user_id),
-                "SK": self.sk(self.payment_method_id),
-                "entity": self.ENTITY,
-                "payment_method_id": self.payment_method_id,
-                "provider": self.provider,
-                "card_holder_name": self.card_holder_name,
-                "card_last4": self.card_last4,
-                "card_number_encrypted": self.card_number_encrypted,
-                "exp_month": self.exp_month,
-                "exp_year": self.exp_year,
-                "cvc_encrypted": self.cvc_encrypted,
-                "pin_encrypted": self.pin_encrypted,
-                "brand": self.brand,
-                "is_default": self.is_default,
-                "billing_address": self.billing_address,
-                "created_at": self.created_at,
-            }
-        )
-
-
-# --------------------------------------------------------------------------- #
 # MEMBERSHIP  (student's current active plan — singleton per user)
 # --------------------------------------------------------------------------- #
 class Membership(BaseEntity):
@@ -445,7 +393,10 @@ class Membership(BaseEntity):
 class Order(BaseEntity):
     user_id: str
     order_id: str
-    plan_type: PlanType
+    plan_type: Optional[PlanType] = None
+    item_kind: str = "plan"
+    webinar_id: Optional[str] = None
+    webinar_title: Optional[str] = None
     amount: float | Decimal
     currency: str = "USD"
     status: OrderStatus = OrderStatus.PENDING
@@ -474,6 +425,9 @@ class Order(BaseEntity):
             "entity": self.ENTITY,
             "order_id": self.order_id,
             "plan_type": self.plan_type,
+            "item_kind": self.item_kind or "plan",
+            "webinar_id": self.webinar_id,
+            "webinar_title": self.webinar_title,
             "amount": _money(self.amount),
             "currency": self.currency,
             "status": self.status,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { AuthAlert } from "@/components/platform/auth/AuthAlert";
+import { Button } from "@/components/ui/Button";
 import { useServerPortalTheme } from "@/components/platform/provider/PortalThemeProvider";
 import {
   getPortalThemeSnapshot,
@@ -12,23 +13,25 @@ import { SidebarSvgIcon } from "@/components/platform/provider/sidebar-icons";
 import { CourseCoverArt } from "@/components/platform/provider/student/lectures/CourseCoverArt";
 import { tidyCoverTitle, resolveCourseCover } from "@/components/platform/provider/student/lectures/courseCover";
 import { filterVisibleLectureCourses } from "@/components/platform/provider/student/lectures/hiddenCourses";
+import { LecturePlansDialog } from "@/components/platform/provider/student/lectures/LecturePlansDialog";
 import { LecturesPageLayout } from "@/components/platform/provider/student/lectures/LecturesPageLayout";
 import {
   preloadLectureCoverSrcs,
   preloadSharedLectureCoverAssets,
 } from "@/components/platform/provider/student/lectures/lectureCoverCache";
-import { MembershipLockedButton } from "@/components/platform/provider/student/membership/MembershipGate";
 import { ApiRequestError } from "@/lib/integrate/client";
 import {
   listCourses,
   type CourseSummary,
-  type PaginationMeta,
 } from "@/lib/integrate/provider/student/lectures";
 import { useStudentMembershipAccess } from "@/lib/integrate/provider/student/payment/membershipAccess";
 import { scrollAppToTopSoon } from "@/lib/scroll-to-top";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 12;
+
+const lectureCourseGridClass =
+  "lecture-course-grid grid w-full min-w-0 max-w-full grid-cols-1 gap-4 @min-[30rem]:grid-cols-2 @min-[30rem]:gap-5 @min-[48rem]:grid-cols-3";
 
 function tidySearchText(value: string) {
   return value
@@ -62,11 +65,10 @@ export function StudentLecturesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [courses, setCourses] = useState<CourseSummary[]>([]);
-  const [allCourses, setAllCourses] = useState<CourseSummary[] | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const membershipAccess = useStudentMembershipAccess();
+  const [plansOpen, setPlansOpen] = useState(false);
 
   const trimmedSearch = searchQuery.trim();
   const isSearching = trimmedSearch.length > 0;
@@ -75,15 +77,23 @@ export function StudentLecturesPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await listCourses({ page, limit: PAGE_SIZE });
-      setCourses(data.items);
-      setPagination(data.pagination);
+      const first = await listCourses({ page: 1, limit: 100 });
+      const items = [...first.items];
+      let nextPage = 1;
+      let hasNext = first.pagination.has_next;
+      while (hasNext && nextPage < 20) {
+        nextPage += 1;
+        const data = await listCourses({ page: nextPage, limit: 100 });
+        items.push(...data.items);
+        hasNext = data.pagination.has_next;
+      }
+      setCourses(items);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.message : "Failed to load courses.");
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -98,32 +108,24 @@ export function StudentLecturesPage() {
     preloadSharedLectureCoverAssets();
   }, []);
 
+  const availableCourses = useMemo(
+    () => filterVisibleLectureCourses(courses),
+    [courses],
+  );
+
+  const pageCount = Math.max(1, Math.ceil(availableCourses.length / PAGE_SIZE));
+
   useEffect(() => {
-    if (!isSearching) return;
-
-    let cancelled = false;
-
-    void listCourses({ page: 1, limit: 100 })
-      .then((data) => {
-        if (!cancelled) setAllCourses(data.items);
-      })
-      .catch(() => {
-        if (!cancelled) setAllCourses(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isSearching]);
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
 
   const visibleCourses = useMemo(() => {
-    const source = isSearching ? allCourses ?? courses : courses;
-    const availableCourses = filterVisibleLectureCourses(source);
-
-    if (!isSearching) return availableCourses;
-
-    return availableCourses.filter((course) => courseMatchesSearch(course, trimmedSearch));
-  }, [allCourses, courses, isSearching, trimmedSearch]);
+    if (isSearching) {
+      return availableCourses.filter((course) => courseMatchesSearch(course, trimmedSearch));
+    }
+    const start = (page - 1) * PAGE_SIZE;
+    return availableCourses.slice(start, start + PAGE_SIZE);
+  }, [availableCourses, isSearching, page, trimmedSearch]);
 
   useEffect(() => {
     if (visibleCourses.length === 0) return;
@@ -148,14 +150,16 @@ export function StudentLecturesPage() {
       ) : null}
 
       {loading ? (
+        <div className="@container min-w-0 w-full">
         <div
-          className="lecture-course-grid grid w-full min-w-0 max-w-full grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:gap-5 lg:grid-cols-3"
+          className={lectureCourseGridClass}
           aria-busy="true"
           aria-label="Loading courses"
         >
           {Array.from({ length: 8 }, (_, index) => (
             <CourseCardSkeleton key={index} index={index} />
           ))}
+        </div>
         </div>
       ) : visibleCourses.length === 0 ? (
         <div className="dashboard-surface rounded-xl p-8 text-center sm:p-10">
@@ -164,7 +168,8 @@ export function StudentLecturesPage() {
           </p>
         </div>
       ) : (
-        <div className="lecture-course-grid grid w-full min-w-0 max-w-full grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+        <div className="@container min-w-0 w-full">
+        <div className={lectureCourseGridClass}>
           {visibleCourses.map((course, index) => (
             <CourseCard
               key={course.course_id}
@@ -172,20 +177,22 @@ export function StudentLecturesPage() {
               index={index}
               locked={membershipAccess.locked}
               openable={membershipAccess.ready && membershipAccess.unlocked}
+              onOpenPlans={() => setPlansOpen(true)}
             />
           ))}
         </div>
+        </div>
       )}
 
-      {!isSearching && pagination && pagination.total_pages > 1 ? (
+      {!isSearching && pageCount > 1 ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-brand-caption text-center text-[color:var(--dash-faint)] sm:text-left">
-            Page {pagination.page} of {pagination.total_pages} · {pagination.total} courses
+            Page {page} of {pageCount} · {availableCourses.length} courses
           </p>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
             <PagerButton
               variant="prev"
-              disabled={!pagination.has_previous || loading}
+              disabled={page <= 1 || loading}
               onClick={() => {
                 scrollAppToTopSoon();
                 setPage((prev) => Math.max(1, prev - 1));
@@ -197,10 +204,10 @@ export function StudentLecturesPage() {
             </PagerButton>
             <PagerButton
               variant="next"
-              disabled={!pagination.has_next || loading}
+              disabled={page >= pageCount || loading}
               onClick={() => {
                 scrollAppToTopSoon();
-                setPage((prev) => prev + 1);
+                setPage((prev) => Math.min(pageCount, prev + 1));
               }}
             >
               <span className="sm:hidden">Next</span>
@@ -210,6 +217,7 @@ export function StudentLecturesPage() {
           </div>
         </div>
       ) : null}
+      <LecturePlansDialog open={plansOpen} onClose={() => setPlansOpen(false)} />
     </LecturesPageLayout>
   );
 }
@@ -225,13 +233,21 @@ function PagerButton({
   onClick: () => void;
   variant: "prev" | "next";
 }) {
-  const className =
-    variant === "next"
-      ? "lesson-next-cta dashboard-navy-btn font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white transition disabled:pointer-events-none disabled:opacity-50 disabled:hover:brightness-100 sm:min-h-10 sm:w-auto"
-      : "lesson-prev-cta dashboard-pill-soft font-sans inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-[color:var(--dash-text)] transition disabled:pointer-events-none disabled:opacity-50 sm:min-h-10 sm:w-auto";
+  if (variant === "next") {
+    return (
+      <Button type="button" disabled={disabled} onClick={onClick} className="lecture-page-action w-full px-5 sm:w-auto">
+        {children}
+      </Button>
+    );
+  }
 
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className={className}>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="lecture-page-action dashboard-navy-btn font-sans inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
+    >
       {children}
     </button>
   );
@@ -253,13 +269,22 @@ function CourseCardSkeleton({ index }: { index: number }) {
       className="lecture-course-card lecture-course-skeleton flex h-full w-full min-h-0 flex-col overflow-hidden rounded-2xl"
       aria-hidden
     >
-      <span className="lecture-skeleton-block mx-0 aspect-[5/4] w-full shrink-0 rounded-none" />
+      <span className="lecture-skeleton-block aspect-[5/4] w-full shrink-0 rounded-none" />
       <div className="lecture-course-card-glass flex shrink-0 flex-col px-4 pt-3 pb-4">
-        <span className="lecture-skeleton-block lecture-course-card-title block w-3/4 rounded" />
-        <div className="lecture-course-stats grid grid-cols-3 overflow-hidden">
-          <span className="lecture-skeleton-block h-7 w-full rounded-none" />
-          <span className="lecture-skeleton-block h-7 w-full rounded-none" />
-          <span className="lecture-skeleton-block h-7 w-full rounded-none" />
+        <div className="lecture-card-title-skeleton">
+          <span className="lecture-skeleton-block w-[88%] rounded-md" />
+          <span className="lecture-skeleton-block w-[58%] rounded-md" />
+        </div>
+        <div className="lecture-course-stats">
+          {Array.from({ length: 3 }, (_, stat) => (
+            <div
+              key={stat}
+              className="lecture-stat-column flex flex-col items-center justify-center gap-1 px-1 py-2"
+            >
+              <span className="lecture-skeleton-block h-3.5 w-6 rounded" />
+              <span className="lecture-skeleton-block h-2 w-10 max-w-[80%] rounded" />
+            </div>
+          ))}
         </div>
         <span className="lecture-skeleton-block mt-2.5 block h-10 w-full rounded-full" />
       </div>
@@ -272,11 +297,13 @@ function CourseCard({
   index,
   locked,
   openable,
+  onOpenPlans,
 }: {
   course: CourseSummary;
   index: number;
   locked: boolean;
   openable: boolean;
+  onOpenPlans: () => void;
 }) {
   // Keep theme subscription so dark/light card chrome stays in sync.
   const serverTheme = useServerPortalTheme();
@@ -305,15 +332,28 @@ function CourseCard({
   );
 
   if (locked) {
+    const title = tidyCoverTitle(course.title);
     return (
       <div style={cardStyle} className={cardClassName}>
-        {media}
+        <button
+          type="button"
+          onClick={onOpenPlans}
+          className="block w-full text-left"
+          aria-label={`Reveal ${title}`}
+        >
+          {media}
+        </button>
         <div className="lecture-course-card-glass relative z-[2] flex shrink-0 flex-col px-4 pt-3 pb-4">
-          <h2 className="lecture-course-card-title font-sans">{tidyCoverTitle(course.title)}</h2>
+          <h2 className="lecture-course-card-title font-sans">{title}</h2>
           {stats}
-          <MembershipLockedButton className="lecture-course-card-cta mt-2.5 w-full">
+          <button
+            type="button"
+            className="lecture-course-card-cta dashboard-navy-btn font-sans mt-2.5 inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white"
+            onClick={onOpenPlans}
+          >
+            <SidebarSvgIcon name="lock" size={15} strokeWidth={2.1} />
             Learn more
-          </MembershipLockedButton>
+          </button>
         </div>
       </div>
     );
@@ -326,7 +366,7 @@ function CourseCard({
         <div className="lecture-course-card-glass relative z-[2] flex shrink-0 flex-col px-4 pt-3 pb-4">
           <h2 className="lecture-course-card-title font-sans">{tidyCoverTitle(course.title)}</h2>
           {stats}
-          <span className="dashboard-navy-btn lecture-course-card-cta font-sans mt-2.5 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10">
+          <span className="lecture-course-card-cta font-sans mt-2.5 inline-flex h-10 min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em]">
             Learn more
             <SidebarSvgIcon name="next" size={15} />
           </span>
@@ -335,21 +375,23 @@ function CourseCard({
     );
   }
 
+  const courseHref = `/student/lectures/${course.course_id}`;
+
   return (
-    <Link href={`/student/lectures/${course.course_id}`} style={cardStyle} className={cardClassName}>
-      {media}
+    <div style={cardStyle} className={cardClassName}>
+      <Link href={courseHref} className="block min-w-0" aria-label={tidyCoverTitle(course.title)}>
+        {media}
+      </Link>
       <div className="lecture-course-card-glass relative z-[2] flex shrink-0 flex-col px-4 pt-3 pb-4">
-        <h2 className="lecture-course-card-title font-sans">{tidyCoverTitle(course.title)}</h2>
+        <Link href={courseHref} className="min-w-0 no-underline">
+          <h2 className="lecture-course-card-title font-sans">{tidyCoverTitle(course.title)}</h2>
+        </Link>
         {stats}
-        <span className="dashboard-navy-btn lecture-course-card-cta font-sans mt-2.5 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-5 text-sm font-medium tracking-[0.01em] text-white sm:min-h-10">
+        <Button href={courseHref} className="lecture-page-action mt-2.5 w-full">
           Learn more
-          <SidebarSvgIcon
-            name="next"
-            size={15}
-            className="transition-transform duration-300 ease-out group-hover:translate-x-0.5"
-          />
-        </span>
+          <SidebarSvgIcon name="next" size={15} />
+        </Button>
       </div>
-    </Link>
+    </div>
   );
 }

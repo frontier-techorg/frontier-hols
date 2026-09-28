@@ -79,12 +79,6 @@ export function notifyNotificationsChanged() {
   window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
 }
 
-export function notificationsInboxPath(role?: string | null) {
-  if (role === "admin") return "/admin/notifications";
-  if (role === "affiliate") return "/affiliate/notifications";
-  return "/student/notifications";
-}
-
 export function formatNotificationWhen(iso?: string | null, nowMs?: number | null) {
   if (!iso) return "";
   const date = new Date(iso);
