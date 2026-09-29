@@ -119,7 +119,7 @@ export const landingContent = {
       {
         id: "courses",
         step: "Train",
-        image: "/assets/creatives/Training%20that%20sticks.png",
+        image: "/assets/creatives/training-that-sticks.png",
         title: "Expert-Led Courses",
         description:
           "Training that actually teaches. Onboard your team quickly and ensure everyone operates at the highest clinical standard.",
@@ -127,7 +127,7 @@ export const landingContent = {
       {
         id: "dosing",
         step: "Dose",
-        image: "/assets/creatives/Dosing%20tools%20that%20do%20the%20math.png",
+        image: "/assets/creatives/dosing-tools-that-do-the-math.png",
         title: "Dosing Tools That Do the Math",
         description:
           "Eliminate human error. Get precise, instant calculations tailored to your patient protocols without the guesswork.",
@@ -135,7 +135,7 @@ export const landingContent = {
       {
         id: "documents",
         step: "Document",
-        image: "/assets/creatives/Patient%20paperwork%2C%20done%20for%20you.png",
+        image: "/assets/creatives/patient-paperwork-done-for-you.png",
         title: "Ready-to-Use Patient Documents",
         description:
           "Fully compliant paperwork customized with your clinic’s branding. Ready to print or sign digitally from day one.",
@@ -148,7 +148,7 @@ export const landingContent = {
     items: [
       {
         id: "training",
-        image: "/assets/creatives/Training%20that%20sticks.png",
+        image: "/assets/creatives/training-that-sticks.png",
         title: "Training that sticks",
         shortTitle: "Training",
         category: "Courses",
@@ -159,7 +159,7 @@ export const landingContent = {
       },
       {
         id: "reference",
-        image: "/assets/creatives/A%20peptide%20reference%20you%20can%20trust.png",
+        image: "/assets/creatives/a-peptide-reference-you-can-trust.png",
         title: "A peptide reference you can trust",
         shortTitle: "Reference",
         category: "Library",
@@ -170,7 +170,7 @@ export const landingContent = {
       },
       {
         id: "dosing",
-        image: "/assets/creatives/Dosing%20tools%20that%20do%20the%20math.png",
+        image: "/assets/creatives/dosing-tools-that-do-the-math.png",
         title: "Dosing tools that do the math",
         shortTitle: "Dosing",
         category: "Tools",
@@ -181,7 +181,7 @@ export const landingContent = {
       },
       {
         id: "paperwork",
-        image: "/assets/creatives/Patient%20paperwork%2C%20done%20for%20you.png",
+        image: "/assets/creatives/patient-paperwork-done-for-you.png",
         title: "Patient paperwork, done for you",
         shortTitle: "Paperwork",
         category: "Documents",
@@ -192,7 +192,7 @@ export const landingContent = {
       },
       {
         id: "community",
-        image: "/assets/creatives/A%20community%20that%20understands%20your%20work.png",
+        image: "/assets/creatives/a-community-that-understands-your-work.png",
         title: "A community that understands your work",
         shortTitle: "Community",
         category: "Network",
@@ -203,7 +203,7 @@ export const landingContent = {
       },
       {
         id: "assistant",
-        image: "/assets/creatives/An%20assistant%20you%20can%20trust.png",
+        image: "/assets/creatives/an-assistant-you-can-trust.png",
         title: "An assistant you can trust",
         shortTitle: "Assistant",
         category: "Support",
@@ -247,7 +247,7 @@ export const landingContent = {
     body: "Finish the courses, pass the check, and earn a House of Life Sciences certification, proof your staff know what they’re doing, renewed as things change.",
     cta: { label: "Get certified", href: "/register" },
     image:
-      "/assets/creatives/Give%20your%20team%20a%20credential%20that%20means%20something_-Photoroom.png",
+      "/assets/creatives/give-your-team-a-credential-that-means-something_-photoroom.png",
   },
   pricingTeaser: {
     eyebrow: "Pricing",
@@ -259,7 +259,7 @@ export const landingContent = {
         title: "Monthly",
         price: "$29.99",
         duration: "30 days access",
-        image: "/assets/creatives/Training%20that%20sticks.png",
+        image: "/assets/creatives/training-that-sticks.png",
         cta: { label: "Purchase", href: "/register" },
         featured: false,
       },
@@ -268,7 +268,7 @@ export const landingContent = {
         title: "Biannual",
         price: "$149.99",
         duration: "182 days access",
-        image: "/assets/creatives/One%20trusted%20system.png",
+        image: "/assets/creatives/one-trusted-system.png",
         cta: { label: "Purchase", href: "/register" },
         featured: true,
         badge: "Most popular",
@@ -278,7 +278,7 @@ export const landingContent = {
         title: "Annual",
         price: "$249.99",
         duration: "365 days access",
-        image: "/assets/creatives/Dosing%20tools%20that%20do%20the%20math.png",
+        image: "/assets/creatives/dosing-tools-that-do-the-math.png",
         cta: { label: "Purchase", href: "/register" },
         featured: false,
         badge: "Best value",

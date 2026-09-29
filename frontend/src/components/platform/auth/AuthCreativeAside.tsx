@@ -7,7 +7,7 @@ export function AuthCreativeAside() {
   return (
     <aside className="relative hidden min-h-0 overflow-hidden lg:block lg:h-full">
       <Image
-        src="/assets/creatives/01%20Clinic%20owners.png"
+        src="/assets/creatives/01-clinic-owners.png"
         alt=""
         fill
         priority
