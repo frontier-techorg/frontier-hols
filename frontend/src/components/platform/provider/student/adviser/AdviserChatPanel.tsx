@@ -646,7 +646,7 @@ function AssistantFrame({
   return (
     <div className="adviser-assistant">
       <span className="adviser-assistant-ball" aria-hidden>
-        <img src="/assets/ball/ball.png" alt="" width={37} height={37} />
+        <img src="https://frontiercms.s3.us-east-1.amazonaws.com/ball_37de8c23c1.png" alt="" width={37} height={37} />
       </span>
       <p className="adviser-assistant-label">AI Assistant</p>
       <div className={cn("adviser-assistant-card", board && "adviser-assistant-card--board")}>

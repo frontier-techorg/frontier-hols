@@ -98,7 +98,7 @@ export function HookHolsBall({ innerRef, className, labelInFlow = false }: HookH
           )}
         >
           <Image
-            src="/assets/ball/ball.png"
+            src="https://frontiercms.s3.us-east-1.amazonaws.com/ball_37de8c23c1.png"
             alt=""
             width={480}
             height={480}

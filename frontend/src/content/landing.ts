@@ -119,7 +119,7 @@ export const landingContent = {
       {
         id: "courses",
         step: "Train",
-        image: "/assets/creatives/training-that-sticks.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/training_that_sticks_471ed9664a.png",
         title: "Expert-Led Courses",
         description:
           "Training that actually teaches. Onboard your team quickly and ensure everyone operates at the highest clinical standard.",
@@ -127,7 +127,7 @@ export const landingContent = {
       {
         id: "dosing",
         step: "Dose",
-        image: "/assets/creatives/dosing-tools-that-do-the-math.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/dosing_tools_that_do_the_math_94a337ed4a.png",
         title: "Dosing Tools That Do the Math",
         description:
           "Eliminate human error. Get precise, instant calculations tailored to your patient protocols without the guesswork.",
@@ -135,7 +135,7 @@ export const landingContent = {
       {
         id: "documents",
         step: "Document",
-        image: "/assets/creatives/patient-paperwork-done-for-you.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/patient_paperwork_done_for_you_bea7ad33fa.png",
         title: "Ready-to-Use Patient Documents",
         description:
           "Fully compliant paperwork customized with your clinic’s branding. Ready to print or sign digitally from day one.",
@@ -148,7 +148,7 @@ export const landingContent = {
     items: [
       {
         id: "training",
-        image: "/assets/creatives/training-that-sticks.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/training_that_sticks_471ed9664a.png",
         title: "Training that sticks",
         shortTitle: "Training",
         category: "Courses",
@@ -159,7 +159,7 @@ export const landingContent = {
       },
       {
         id: "reference",
-        image: "/assets/creatives/a-peptide-reference-you-can-trust.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/a_peptide_reference_you_can_trust_6674eacf87.png",
         title: "A peptide reference you can trust",
         shortTitle: "Reference",
         category: "Library",
@@ -170,7 +170,7 @@ export const landingContent = {
       },
       {
         id: "dosing",
-        image: "/assets/creatives/dosing-tools-that-do-the-math.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/dosing_tools_that_do_the_math_94a337ed4a.png",
         title: "Dosing tools that do the math",
         shortTitle: "Dosing",
         category: "Tools",
@@ -181,7 +181,7 @@ export const landingContent = {
       },
       {
         id: "paperwork",
-        image: "/assets/creatives/patient-paperwork-done-for-you.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/patient_paperwork_done_for_you_bea7ad33fa.png",
         title: "Patient paperwork, done for you",
         shortTitle: "Paperwork",
         category: "Documents",
@@ -192,7 +192,7 @@ export const landingContent = {
       },
       {
         id: "community",
-        image: "/assets/creatives/a-community-that-understands-your-work.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/a_community_that_understands_your_work_6208c0cfbd.png",
         title: "A community that understands your work",
         shortTitle: "Community",
         category: "Network",
@@ -203,7 +203,7 @@ export const landingContent = {
       },
       {
         id: "assistant",
-        image: "/assets/creatives/an-assistant-you-can-trust.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/an_assistant_you_can_trust_6c7b0b2fcf.png",
         title: "An assistant you can trust",
         shortTitle: "Assistant",
         category: "Support",
@@ -247,7 +247,7 @@ export const landingContent = {
     body: "Finish the courses, pass the check, and earn a House of Life Sciences certification, proof your staff know what they’re doing, renewed as things change.",
     cta: { label: "Get certified", href: "/register" },
     image:
-      "/assets/creatives/give-your-team-a-credential-that-means-something_-photoroom.png",
+      "https://frontiercms.s3.us-east-1.amazonaws.com/give_your_team_a_credential_that_means_something_photoroom_37f27f4009.png",
   },
   pricingTeaser: {
     eyebrow: "Pricing",
@@ -259,7 +259,7 @@ export const landingContent = {
         title: "Monthly",
         price: "$29.99",
         duration: "30 days access",
-        image: "/assets/creatives/training-that-sticks.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/training_that_sticks_471ed9664a.png",
         cta: { label: "Purchase", href: "/register" },
         featured: false,
       },
@@ -268,7 +268,7 @@ export const landingContent = {
         title: "Biannual",
         price: "$149.99",
         duration: "182 days access",
-        image: "/assets/creatives/one-trusted-system.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/one_trusted_system_1a453af179.png",
         cta: { label: "Purchase", href: "/register" },
         featured: true,
         badge: "Most popular",
@@ -278,7 +278,7 @@ export const landingContent = {
         title: "Annual",
         price: "$249.99",
         duration: "365 days access",
-        image: "/assets/creatives/dosing-tools-that-do-the-math.png",
+        image: "https://frontiercms.s3.us-east-1.amazonaws.com/dosing_tools_that_do_the_math_94a337ed4a.png",
         cta: { label: "Purchase", href: "/register" },
         featured: false,
         badge: "Best value",
@@ -288,7 +288,7 @@ export const landingContent = {
   finalCta: {
     headline: "Clinics go further when they practice with confidence.",
     headlineAccent: "with confidence",
-    image: "/assets/ball/ball.png",
+    image: "https://frontiercms.s3.us-east-1.amazonaws.com/ball_37de8c23c1.png",
     primaryCta: { label: "Get Started", href: "/register" },
     secondaryCta: {
       label: "Book a Demo",

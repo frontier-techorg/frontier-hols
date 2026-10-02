@@ -5,8 +5,8 @@ import { coverPeptideName } from "@/components/platform/provider/student/lecture
 import { preloadLectureCoverSrcs } from "@/components/platform/provider/student/lectures/lectureCoverCache";
 import { cn } from "@/lib/utils";
 
-const TEMPLATE_LIGHT = "/assets/lectures/mode/light.png";
-const TEMPLATE_DARK = "/assets/lectures/mode/dark.png";
+const TEMPLATE_LIGHT = "https://frontiercms.s3.us-east-1.amazonaws.com/light_c9ccd4a99c.png";
+const TEMPLATE_DARK = "https://frontiercms.s3.us-east-1.amazonaws.com/dark_6d8ea7295f.png";
 
 type CourseCoverLabeledVialProps = {
   title: string;

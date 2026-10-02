@@ -262,7 +262,7 @@ function HolsVolume({
             <div className="book-interior-grain" aria-hidden />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/assets/logo/hols-logo-mark.png"
+              src="https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_ea0064edd1.png"
               alt=""
               className="book-interior-watermark"
               draggable={false}
@@ -341,7 +341,7 @@ function HolsVolume({
               {/* Soft embossed mark — brand presence without sticker clutter */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/assets/logo/hols-logo-mark.png"
+                src="https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_ea0064edd1.png"
                 alt=""
                 className="book-cover-mark-watermark book-cover-mark-watermark--theme-dark"
                 draggable={false}
@@ -349,7 +349,7 @@ function HolsVolume({
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/assets/logo/hols-logo-mark-light.png"
+                src="https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_light_cc15f5809e.png"
                 alt=""
                 className="book-cover-mark-watermark book-cover-mark-watermark--theme-light"
                 draggable={false}
@@ -368,28 +368,28 @@ function HolsVolume({
                     <div className="book-cover-logo-wrap" aria-label="HOLS">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="/assets/logo/hols-logo-mark.png"
+                        src="https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_ea0064edd1.png"
                         alt=""
                         className="book-cover-mark book-cover-mark--theme-dark"
                         draggable={false}
                       />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="/assets/logo/hols-logo-mark-light.png"
+                        src="https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_light_cc15f5809e.png"
                         alt=""
                         className="book-cover-mark book-cover-mark--theme-light"
                         draggable={false}
                       />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="/assets/logo/hols-logo.png"
+                        src="https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_5c5a89997a.png"
                         alt=""
                         className="book-cover-logo book-cover-logo--theme-dark"
                         draggable={false}
                       />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src="/assets/logo/hols-logo-light.png"
+                        src="https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_light_6bbeb3f758.png"
                         alt=""
                         className="book-cover-logo book-cover-logo--theme-light"
                         draggable={false}

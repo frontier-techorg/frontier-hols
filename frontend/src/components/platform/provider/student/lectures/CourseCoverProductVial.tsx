@@ -4,8 +4,8 @@ import { type CSSProperties, memo, useEffect, useId } from "react";
 import { preloadLectureCoverSrcs } from "@/components/platform/provider/student/lectures/lectureCoverCache";
 import { cn } from "@/lib/utils";
 
-const MODE_LIGHT = "/assets/lectures/mode/light.png";
-const MODE_DARK = "/assets/lectures/mode/dark.png";
+const MODE_LIGHT = "https://frontiercms.s3.us-east-1.amazonaws.com/light_c9ccd4a99c.png";
+const MODE_DARK = "https://frontiercms.s3.us-east-1.amazonaws.com/dark_6d8ea7295f.png";
 
 type CourseCoverProductVialProps = {
   /** Transparent product vial PNG (same art for light + dark). */

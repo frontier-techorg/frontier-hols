@@ -26,13 +26,13 @@ export const metadata: Metadata = {
   description: brand.description,
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon-64.png", type: "image/png", sizes: "64x64" },
-      { url: "/favicon.png", type: "image/png", sizes: "192x192" },
-      { url: "/favicon-512.png", type: "image/png", sizes: "512x512" },
+      { url: "https://frontiercms.s3.us-east-1.amazonaws.com/favicon_88268a37e8.ico", sizes: "any" },
+      { url: "https://frontiercms.s3.us-east-1.amazonaws.com/favicon_32_c6835beb3e.png", type: "image/png", sizes: "32x32" },
+      { url: "https://frontiercms.s3.us-east-1.amazonaws.com/favicon_64_c9e53cc6bf.png", type: "image/png", sizes: "64x64" },
+      { url: "https://frontiercms.s3.us-east-1.amazonaws.com/favicon_99403dfe09.png", type: "image/png", sizes: "192x192" },
+      { url: "https://frontiercms.s3.us-east-1.amazonaws.com/favicon_512_bb9fbb8e6d.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "https://frontiercms.s3.us-east-1.amazonaws.com/apple_icon_e52806eb3c.png", sizes: "180x180", type: "image/png" }],
   },
 };
 

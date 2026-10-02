@@ -2,10 +2,10 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 const logos = {
-  dark: "/assets/logo/hols-logo.png",
-  light: "/assets/logo/hols-logo-light.png",
-  mark: "/assets/logo/hols-logo-mark.png",
-  markLight: "/assets/logo/hols-logo-mark-light.png",
+  dark: "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_5c5a89997a.png",
+  light: "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_light_6bbeb3f758.png",
+  mark: "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_ea0064edd1.png",
+  markLight: "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_light_cc15f5809e.png",
 } as const;
 
 type LogoProps = {

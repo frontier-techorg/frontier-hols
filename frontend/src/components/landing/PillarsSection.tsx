@@ -175,6 +175,7 @@ function PillarImage({
         src={src}
         alt={alt}
         fill
+        unoptimized
         className={cn(
           "object-cover transition-[filter,transform] ease-in-out",
           blurred && "scale-105 blur-[2px]",

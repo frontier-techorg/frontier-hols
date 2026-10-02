@@ -1,14 +1,11 @@
 /**
  * Deterministic cover styling for lecture/course cards.
- * Assets live under /assets/lectures:
- *   lecture_book/{slug}-light|dark.png  — book covers (theme-specific)
- *   lecture_vial/{slug}.png             — transparent product vials (shared)
- *   mode/light|dark.png                 — studio backgrounds behind vials
+ * Book covers, vial art, and studio backgrounds are S3 URLs.
  */
 
 /** Theme studio backgrounds for product-vial covers. */
-export const MODE_PHOTO_LIGHT = "/assets/lectures/mode/light.png";
-export const MODE_PHOTO_DARK = "/assets/lectures/mode/dark.png";
+export const MODE_PHOTO_LIGHT = "https://frontiercms.s3.us-east-1.amazonaws.com/light_c9ccd4a99c.png";
+export const MODE_PHOTO_DARK = "https://frontiercms.s3.us-east-1.amazonaws.com/dark_6d8ea7295f.png";
 
 /** @deprecated Prefer MODE_PHOTO_LIGHT / MODE_PHOTO_DARK */
 export const VIAL_PHOTO_LIGHT = MODE_PHOTO_LIGHT;
@@ -119,7 +116,7 @@ const BOOK_COVER_ENTRIES: BookCoverEntry[] = [
 
 /**
  * Title-slug → vial filename (without .png) when slugify does not match the file.
- * Files live in /assets/lectures/lecture_vial/.
+ * Vial files are the uploaded lecture product stills.
  */
 const VIAL_SLUG_ALIASES: Record<string, string> = {
   epithalon: "epitalon",
@@ -139,101 +136,118 @@ const VIAL_SLUG_ALIASES: Record<string, string> = {
   mgf: "mgf-igf-1ec",
 };
 
-/** Known vial asset stems present under lecture_vial/. */
-const VIAL_ASSET_SLUGS = new Set<string>([
-  "5-amino-1mq",
-  "aod-9604",
-  "ara-290",
-  "b7-33",
-  "bacteriostatic-water",
-  "bdnf",
-  "bpc-157",
-  "bronchogen",
-  "cagrilintide",
-  "cardiogen",
-  "cartalax",
-  "chonluten",
-  "cjc-1295-no-dac",
-  "cjc-1295-with-dac",
-  "colostrum",
-  "cortagen",
-  "curcumin",
-  "dihexa",
-  "dsip",
-  "epitalon",
-  "follistatin-344",
-  "foxo4-dri",
-  "ghk-cu",
-  "ghrp-2",
-  "ghrp-6",
-  "glp-1",
-  "gonadorelin",
-  "hcg",
-  "hexarelin",
-  "hgh",
-  "hgh-fragment-176-191",
-  "humanin",
-  "igf-1-des",
-  "igf-1-lr3",
-  "ipamorelin",
-  "kisspeptin-10",
-  "kpv",
-  "livagen",
-  "ll-37",
-  "mazdutide",
-  "melanotan-i",
-  "melanotan-ii",
-  "mgf-igf-1ec",
-  "mk-677",
-  "mots-c",
-  "n-acetyl-epithalon-amidate",
-  "nad-plus",
-  "ovangen",
-  "oxytocin",
-  "pancragen",
-  "pe-22-28",
-  "peg-mgf",
-  "pinealon",
-  "pnc-27",
-  "pnc-28",
-  "prostamax",
-  "pt-141",
-  "retatrutide",
-  "selank",
-  "semaglutide",
-  "semax",
-  "sermorelin",
-  "slu-pp-332",
-  "ss-31",
-  "survodutide",
-  "tb-500",
-  "tesamorelin",
-  "tesofensine",
-  "thymagen",
-  "thymalin",
-  "thymosin-alpha-1",
-  "thymulin",
-  "tirzepatide",
-  "trh-thyrotropin",
-  "vesugen",
-  "vilon",
-  "vip",
-]);
-
 const MODE_PHOTOS: CourseCoverPhotos = {
   light: MODE_PHOTO_LIGHT,
   dark: MODE_PHOTO_DARK,
 };
 
+const BOOK_COVER_URLS: Record<string, CourseCoverPhotos> = {
+  "peptide-dosing-guide": {
+    light: "https://frontiercms.s3.us-east-1.amazonaws.com/peptide_dosing_guide_light_78efe489b8.png",
+    dark: "https://frontiercms.s3.us-east-1.amazonaws.com/peptide_dosing_guide_dark_10b840d67d.png",
+  },
+  "alpha-biomed-sales-training": {
+    light: "https://frontiercms.s3.us-east-1.amazonaws.com/alpha_biomed_sales_training_light_2ae47c6119.png",
+    dark: "https://frontiercms.s3.us-east-1.amazonaws.com/alpha_biomed_sales_training_dark_cee451a8ea.png",
+  },
+  "alpha-biomed-sales-dos-and-donts": {
+    light: "https://frontiercms.s3.us-east-1.amazonaws.com/alpha_biomed_sales_dos_and_donts_light_0d88760e54.png",
+    dark: "https://frontiercms.s3.us-east-1.amazonaws.com/alpha_biomed_sales_dos_and_donts_dark_4dc431a376.png",
+  },
+  "alpha-biomed-sales-faq": {
+    light: "https://frontiercms.s3.us-east-1.amazonaws.com/alpha_biomed_sales_faq_light_be2264949e.png",
+    dark: "https://frontiercms.s3.us-east-1.amazonaws.com/alpha_biomed_sales_faq_dark_fb65d1fd29.png",
+  },
+};
+
 function bookPhotos(bookFile: string): CourseCoverPhotos {
-  return {
-    light: `/assets/lectures/lecture_book/${bookFile}-light.png`,
-    dark: `/assets/lectures/lecture_book/${bookFile}-dark.png`,
-  };
+  return BOOK_COVER_URLS[bookFile] ?? { light: "", dark: "" };
 }
 
+const VIAL_ASSET_URLS: Record<string, string> = {
+  "5-amino-1mq": "https://frontiercms.s3.us-east-1.amazonaws.com/5_amino_1mq_54ab3a26d4.png",
+  "aod-9604": "https://frontiercms.s3.us-east-1.amazonaws.com/aod_9604_3f66fdbc67.png",
+  "ara-290": "https://frontiercms.s3.us-east-1.amazonaws.com/ara_290_d822cabfed.png",
+  "b7-33": "https://frontiercms.s3.us-east-1.amazonaws.com/b7_33_8875e8365e.png",
+  "bacteriostatic-water": "https://frontiercms.s3.us-east-1.amazonaws.com/bacteriostatic_water_e4a8624543.png",
+  "bdnf": "https://frontiercms.s3.us-east-1.amazonaws.com/bdnf_41df87a3cc.png",
+  "bpc-157": "https://frontiercms.s3.us-east-1.amazonaws.com/bpc_157_5bdb3dc092.png",
+  "bronchogen": "https://frontiercms.s3.us-east-1.amazonaws.com/bronchogen_580773546f.png",
+  "cagrilintide": "https://frontiercms.s3.us-east-1.amazonaws.com/cagrilintide_3b38d4036d.png",
+  "cardiogen": "https://frontiercms.s3.us-east-1.amazonaws.com/cardiogen_dbb827a96a.png",
+  "cartalax": "https://frontiercms.s3.us-east-1.amazonaws.com/cartalax_93f2e420ff.png",
+  "chonluten": "https://frontiercms.s3.us-east-1.amazonaws.com/chonluten_de8c6e2cca.png",
+  "cjc-1295-no-dac": "https://frontiercms.s3.us-east-1.amazonaws.com/cjc_1295_no_dac_9dcec3cbd0.png",
+  "cjc-1295-with-dac": "https://frontiercms.s3.us-east-1.amazonaws.com/cjc_1295_with_dac_8d4f93c6ba.png",
+  "colostrum": "https://frontiercms.s3.us-east-1.amazonaws.com/colostrum_7b7fd5eb2d.png",
+  "cortagen": "https://frontiercms.s3.us-east-1.amazonaws.com/cortagen_a606a1d774.png",
+  "curcumin": "https://frontiercms.s3.us-east-1.amazonaws.com/curcumin_6d8032a554.png",
+  "dihexa": "https://frontiercms.s3.us-east-1.amazonaws.com/dihexa_bbe41ce45c.png",
+  "dsip": "https://frontiercms.s3.us-east-1.amazonaws.com/dsip_7e0c9903a1.png",
+  "epitalon": "https://frontiercms.s3.us-east-1.amazonaws.com/epitalon_3a5dd32630.png",
+  "follistatin-344": "https://frontiercms.s3.us-east-1.amazonaws.com/follistatin_344_c4d4f9da86.png",
+  "foxo4-dri": "https://frontiercms.s3.us-east-1.amazonaws.com/foxo4_dri_e520103154.png",
+  "ghk-cu": "https://frontiercms.s3.us-east-1.amazonaws.com/ghk_cu_cf9df7476f.png",
+  "ghrp-2": "https://frontiercms.s3.us-east-1.amazonaws.com/ghrp_2_0d922cdbe8.png",
+  "ghrp-6": "https://frontiercms.s3.us-east-1.amazonaws.com/ghrp_6_e8b3fad002.png",
+  "glp-1": "https://frontiercms.s3.us-east-1.amazonaws.com/glp_1_9edc1b58c7.png",
+  "gonadorelin": "https://frontiercms.s3.us-east-1.amazonaws.com/gonadorelin_b55a110909.png",
+  "hcg": "https://frontiercms.s3.us-east-1.amazonaws.com/hcg_a7779d0354.png",
+  "hexarelin": "https://frontiercms.s3.us-east-1.amazonaws.com/hexarelin_a893966848.png",
+  "hgh": "https://frontiercms.s3.us-east-1.amazonaws.com/hgh_ac64b7b938.png",
+  "hgh-fragment-176-191": "https://frontiercms.s3.us-east-1.amazonaws.com/hgh_fragment_176_191_38b63c0ae1.png",
+  "humanin": "https://frontiercms.s3.us-east-1.amazonaws.com/humanin_adf2304f2b.png",
+  "igf-1-des": "https://frontiercms.s3.us-east-1.amazonaws.com/igf_1_des_d8f93546c6.png",
+  "igf-1-lr3": "https://frontiercms.s3.us-east-1.amazonaws.com/igf_1_lr3_9ede66ff91.png",
+  "ipamorelin": "https://frontiercms.s3.us-east-1.amazonaws.com/ipamorelin_7a0e94dc43.png",
+  "kisspeptin-10": "https://frontiercms.s3.us-east-1.amazonaws.com/kisspeptin_10_93061794e7.png",
+  "kpv": "https://frontiercms.s3.us-east-1.amazonaws.com/kpv_5fe0a97212.png",
+  "livagen": "https://frontiercms.s3.us-east-1.amazonaws.com/livagen_54ee1f4d84.png",
+  "ll-37": "https://frontiercms.s3.us-east-1.amazonaws.com/ll_37_ead8cea472.png",
+  "mazdutide": "https://frontiercms.s3.us-east-1.amazonaws.com/mazdutide_98c19c5ce2.png",
+  "melanotan-i": "https://frontiercms.s3.us-east-1.amazonaws.com/melanotan_i_6327ff5e30.png",
+  "melanotan-ii": "https://frontiercms.s3.us-east-1.amazonaws.com/melanotan_ii_89c55c8457.png",
+  "mgf-igf-1ec": "https://frontiercms.s3.us-east-1.amazonaws.com/mgf_igf_1ec_b95d029485.png",
+  "mk-677": "https://frontiercms.s3.us-east-1.amazonaws.com/mk_677_e1a1a3bdf4.png",
+  "mots-c": "https://frontiercms.s3.us-east-1.amazonaws.com/mots_c_b973154c5f.png",
+  "n-acetyl-epithalon-amidate": "https://frontiercms.s3.us-east-1.amazonaws.com/n_acetyl_epithalon_amidate_c5033d8953.png",
+  "nad-plus": "https://frontiercms.s3.us-east-1.amazonaws.com/nad_plus_4d2b4337be.png",
+  "ovangen": "https://frontiercms.s3.us-east-1.amazonaws.com/ovangen_85a8e583ae.png",
+  "oxytocin": "https://frontiercms.s3.us-east-1.amazonaws.com/oxytocin_c394161601.png",
+  "pancragen": "https://frontiercms.s3.us-east-1.amazonaws.com/pancragen_cfaf790e07.png",
+  "pe-22-28": "https://frontiercms.s3.us-east-1.amazonaws.com/pe_22_28_d5383773eb.png",
+  "peg-mgf": "https://frontiercms.s3.us-east-1.amazonaws.com/peg_mgf_d0d394ae03.png",
+  "pinealon": "https://frontiercms.s3.us-east-1.amazonaws.com/pinealon_bbe1d4b44e.png",
+  "pnc-27": "https://frontiercms.s3.us-east-1.amazonaws.com/pnc_27_91002427db.png",
+  "pnc-28": "https://frontiercms.s3.us-east-1.amazonaws.com/pnc_28_0e459168a5.png",
+  "prostamax": "https://frontiercms.s3.us-east-1.amazonaws.com/prostamax_b25db3ffba.png",
+  "pt-141": "https://frontiercms.s3.us-east-1.amazonaws.com/pt_141_d519defff5.png",
+  "retatrutide": "https://frontiercms.s3.us-east-1.amazonaws.com/retatrutide_829c1bd6e8.png",
+  "selank": "https://frontiercms.s3.us-east-1.amazonaws.com/selank_d932cad1d3.png",
+  "semaglutide": "https://frontiercms.s3.us-east-1.amazonaws.com/semaglutide_a1f80f0e2b.png",
+  "semax": "https://frontiercms.s3.us-east-1.amazonaws.com/semax_539f9aadd3.png",
+  "sermorelin": "https://frontiercms.s3.us-east-1.amazonaws.com/sermorelin_93784bb9ae.png",
+  "slu-pp-332": "https://frontiercms.s3.us-east-1.amazonaws.com/slu_pp_332_2fe742b699.png",
+  "ss-31": "https://frontiercms.s3.us-east-1.amazonaws.com/ss_31_74e1debfbb.png",
+  "survodutide": "https://frontiercms.s3.us-east-1.amazonaws.com/survodutide_c3b22ed5ed.png",
+  "tb-500": "https://frontiercms.s3.us-east-1.amazonaws.com/tb_500_da88182b37.png",
+  "tesamorelin": "https://frontiercms.s3.us-east-1.amazonaws.com/tesamorelin_46346de634.png",
+  "tesofensine": "https://frontiercms.s3.us-east-1.amazonaws.com/tesofensine_2a8d689b60.png",
+  "thymagen": "https://frontiercms.s3.us-east-1.amazonaws.com/thymagen_8c33c9db7c.png",
+  "thymalin": "https://frontiercms.s3.us-east-1.amazonaws.com/thymalin_39c4abec6d.png",
+  "thymosin-alpha-1": "https://frontiercms.s3.us-east-1.amazonaws.com/thymosin_alpha_1_c6ea77442a.png",
+  "thymulin": "https://frontiercms.s3.us-east-1.amazonaws.com/thymulin_b8f13af905.png",
+  "tirzepatide": "https://frontiercms.s3.us-east-1.amazonaws.com/tirzepatide_0b89af681f.png",
+  "trh-thyrotropin": "https://frontiercms.s3.us-east-1.amazonaws.com/trh_thyrotropin_d8ca4884ef.png",
+  "vesugen": "https://frontiercms.s3.us-east-1.amazonaws.com/vesugen_7de59d8f9b.png",
+  "vilon": "https://frontiercms.s3.us-east-1.amazonaws.com/vilon_d3057d28bb.png",
+  "vip": "https://frontiercms.s3.us-east-1.amazonaws.com/vip_96dc0cfdaa.png",
+};
+
+const VIAL_ASSET_SLUGS = new Set(Object.keys(VIAL_ASSET_URLS));
+
 function vialAssetPath(slug: string): string {
-  return `/assets/lectures/lecture_vial/${slug}.png`;
+  return VIAL_ASSET_URLS[slug] ?? "";
 }
 
 /** Lecture product photo for a peptide name, when that file exists. */

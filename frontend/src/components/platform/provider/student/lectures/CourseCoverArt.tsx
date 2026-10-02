@@ -26,10 +26,10 @@ type CourseCoverArtProps = {
   className?: string;
 };
 
-const LOGO_WORDMARK_LIGHT = "/assets/logo/hols-logo-light.png";
-const LOGO_WORDMARK_DARK = "/assets/logo/hols-logo.png";
-const LOGO_MARK_LIGHT = "/assets/logo/hols-logo-mark-light.png";
-const LOGO_MARK_DARK = "/assets/logo/hols-logo-mark.png";
+const LOGO_WORDMARK_LIGHT = "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_light_6bbeb3f758.png";
+const LOGO_WORDMARK_DARK = "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_5c5a89997a.png";
+const LOGO_MARK_LIGHT = "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_light_cc15f5809e.png";
+const LOGO_MARK_DARK = "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_ea0064edd1.png";
 
 /**
  * HOLS-branded lecture cover —

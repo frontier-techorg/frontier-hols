@@ -7,8 +7,8 @@ import { gsap, registerGsap } from "@/lib/gsap";
 import { HeroSceneCanvas } from "@/components/three/HeroSceneCanvas";
 import { prefersReducedMotion } from "@/lib/motion";
 
-const HERO_VIDEO_MP4 = "/assets/hero/herosection.mp4";
-const HERO_POSTER = "/assets/hero/herosection-poster.jpg";
+const HERO_VIDEO_MP4 = "https://frontiercms.s3.us-east-1.amazonaws.com/herosection_e909ac0823.mp4";
+const HERO_POSTER = "https://frontiercms.s3.us-east-1.amazonaws.com/herosection_poster_90831b4d04.jpg";
 
 type HeroBackgroundProps = {
   variant?: "sky" | "photo";

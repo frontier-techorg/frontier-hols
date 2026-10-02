@@ -198,7 +198,7 @@ const DEMO_PROFILE = {
   email: "jordan.mitchell@email.com",
   clinic: "Summit Wellness Clinic",
   role: "Student account",
-  photo: "/assets/hook/jordan-mitchell.jpg",
+  photo: "https://frontiercms.s3.us-east-1.amazonaws.com/jordan_mitchell_691a38ee60.jpg",
 } as const;
 
 type NavId = (typeof landingContent.hook.dashboard.nav)[number]["id"];
@@ -300,8 +300,8 @@ export function HookInteractiveDashboard({
             <Image
               src={
                 darkMode
-                  ? "/assets/logo/hols-logo-mark-light.png"
-                  : "/assets/logo/hols-logo-mark.png"
+                  ? "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_light_cc15f5809e.png"
+                  : "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_ea0064edd1.png"
               }
               alt=""
               width={18}

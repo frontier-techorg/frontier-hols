@@ -22,8 +22,8 @@ export const HOLS_BRAND = {
 
 /** Logo assets for calculator vial labels. */
 export const HOLS_VIAL_BRAND = {
-  mark: "/assets/logo/hols-logo-mark.png",
-  wordmark: "/assets/logo/hols-logo.png",
+  mark: "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_ea0064edd1.png",
+  wordmark: "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_5c5a89997a.png",
 } as const;
 
 /** Visual scale for each syringe capacity — balanced for overview + draw-scene fit. */

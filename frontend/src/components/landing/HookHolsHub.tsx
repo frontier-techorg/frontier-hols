@@ -15,7 +15,7 @@ export function HookHolsHub() {
         className="relative flex h-16 w-16 items-center justify-center rounded-full bg-primary sm:h-[4.5rem] sm:w-[4.5rem] md:h-20 md:w-20"
       >
         <Image
-          src="/assets/logo/hols-logo-mark-light.png"
+          src="https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_light_cc15f5809e.png"
           alt=""
           width={56}
           height={56}

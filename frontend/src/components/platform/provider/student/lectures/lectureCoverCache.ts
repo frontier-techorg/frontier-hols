@@ -4,15 +4,15 @@
  */
 
 const MODE_ASSETS = [
-  "/assets/lectures/mode/light.png",
-  "/assets/lectures/mode/dark.png",
+  "https://frontiercms.s3.us-east-1.amazonaws.com/light_c9ccd4a99c.png",
+  "https://frontiercms.s3.us-east-1.amazonaws.com/dark_6d8ea7295f.png",
 ] as const;
 
 const LOGO_ASSETS = [
-  "/assets/logo/hols-logo-light.png",
-  "/assets/logo/hols-logo.png",
-  "/assets/logo/hols-logo-mark-light.png",
-  "/assets/logo/hols-logo-mark.png",
+  "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_light_6bbeb3f758.png",
+  "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_5c5a89997a.png",
+  "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_light_cc15f5809e.png",
+  "https://frontiercms.s3.us-east-1.amazonaws.com/hols_logo_mark_ea0064edd1.png",
 ] as const;
 
 const loadedSrcs = new Set<string>();

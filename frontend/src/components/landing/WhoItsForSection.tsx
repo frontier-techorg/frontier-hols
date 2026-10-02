@@ -9,8 +9,8 @@ import { heroLayout } from "@/lib/hero-styles";
 import { prefersReducedMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-const WHO_IT_FOR_VIDEO = "/assets/whoitfor/background.mp4";
-const WHO_IT_FOR_POSTER = "/assets/whoitfor/background.png";
+const WHO_IT_FOR_VIDEO = "https://frontiercms.s3.us-east-1.amazonaws.com/background_35fd479bc8.mp4";
+const WHO_IT_FOR_POSTER = "https://frontiercms.s3.us-east-1.amazonaws.com/background_f65a048b54.png";
 
 type WhoItsForSlide = (typeof landingContent.whoItsFor.slides)[number];
 
